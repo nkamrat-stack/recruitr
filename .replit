@@ -55,12 +55,14 @@ localPort = 8000
 externalPort = 8000
 
 [[ports]]
+localPort = 40405
+externalPort = 3001
+
+[[ports]]
 localPort = 41867
 externalPort = 3000
 
-[[ports]]
-localPort = 43791
-externalPort = 3001
-
 [deployment]
 deploymentTarget = "cloudrun"
+build = ["sh", "-c", "cd frontend && npm run build"]
+run = ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port 8000 & cd frontend && npm start"]

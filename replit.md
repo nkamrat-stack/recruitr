@@ -4,6 +4,14 @@
 Recruitr is a full-stack AI-powered recruiting application with a FastAPI backend and Next.js frontend. It helps rank and match candidates based on their resumes against job descriptions using a multi-factor scoring algorithm.
 
 ## Recent Changes
+- **October 26, 2025**: Candidates List Page Enhanced with Metrics & Filters
+  - Added 4 colorful metrics cards: Total Candidates, New Candidates, In Review, With Materials
+  - Implemented filters bar with search (by name/email), status dropdown, and location dropdown
+  - Added "Clear Filters" functionality with result count display
+  - Updated backend to return artifact_count for each candidate
+  - Used gradient cards with professional TailwindCSS styling
+  - Filtering happens client-side for instant results
+
 - **October 26, 2025**: AI Service Module Created
   - Created `app/services/ai_service.py` with GPT-4o-mini integration
   - Implemented 4 AI functions: get_openai_client, analyze_artifact, generate_candidate_profile, score_candidate_for_job

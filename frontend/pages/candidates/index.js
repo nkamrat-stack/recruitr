@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
 
 const getBackendURL = () => {
@@ -16,6 +16,12 @@ export default function CandidatesList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
+  
+  // Filter states
+  const [searchText, setSearchText] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [locationFilter, setLocationFilter] = useState('all')
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -45,6 +51,42 @@ export default function CandidatesList() {
       setLoading(false)
     }
   }
+
+  // Calculate metrics
+  const metrics = useMemo(() => {
+    const total = candidates.length
+    const newCount = candidates.filter(c => c.status === 'new').length
+    const inReview = candidates.filter(c => ['reviewing', 'interviewed', 'finalist'].includes(c.status)).length
+    const withMaterials = candidates.filter(c => c.artifact_count > 0).length
+    
+    return { total, newCount, inReview, withMaterials }
+  }, [candidates])
+
+  // Get unique locations for filter dropdown
+  const uniqueLocations = useMemo(() => {
+    const locations = candidates
+      .map(c => c.location)
+      .filter(loc => loc && loc.trim() !== '')
+    return [...new Set(locations)].sort()
+  }, [candidates])
+
+  // Filter candidates based on search and filters
+  const filteredCandidates = useMemo(() => {
+    return candidates.filter(candidate => {
+      // Search filter
+      const matchesSearch = searchText === '' || 
+        candidate.name.toLowerCase().includes(searchText.toLowerCase()) ||
+        candidate.email.toLowerCase().includes(searchText.toLowerCase())
+      
+      // Status filter
+      const matchesStatus = statusFilter === 'all' || candidate.status === statusFilter
+      
+      // Location filter
+      const matchesLocation = locationFilter === 'all' || candidate.location === locationFilter
+      
+      return matchesSearch && matchesStatus && matchesLocation
+    })
+  }, [candidates, searchText, statusFilter, locationFilter])
 
   const handleCreateCandidate = async (e) => {
     e.preventDefault()
@@ -82,6 +124,12 @@ export default function CandidatesList() {
     } catch (err) {
       alert(`Error: ${err.message}`)
     }
+  }
+
+  const clearFilters = () => {
+    setSearchText('')
+    setStatusFilter('all')
+    setLocationFilter('all')
   }
 
   const getStatusBadgeColor = (status) => {
@@ -150,6 +198,119 @@ export default function CandidatesList() {
         </div>
       </div>
 
+      {/* Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-100 text-sm font-semibold uppercase">Total Candidates</p>
+              <p className="text-4xl font-bold mt-2">{metrics.total}</p>
+            </div>
+            <div className="text-5xl opacity-20">👥</div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-100 text-sm font-semibold uppercase">New Candidates</p>
+              <p className="text-4xl font-bold mt-2">{metrics.newCount}</p>
+            </div>
+            <div className="text-5xl opacity-20">✨</div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-yellow-100 text-sm font-semibold uppercase">In Review</p>
+              <p className="text-4xl font-bold mt-2">{metrics.inReview}</p>
+            </div>
+            <div className="text-5xl opacity-20">📋</div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-100 text-sm font-semibold uppercase">With Materials</p>
+              <p className="text-4xl font-bold mt-2">{metrics.withMaterials}</p>
+            </div>
+            <div className="text-5xl opacity-20">📄</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search
+            </label>
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Status
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Statuses</option>
+              <option value="new">New</option>
+              <option value="reviewing">Reviewing</option>
+              <option value="interviewed">Interviewed</option>
+              <option value="finalist">Finalist</option>
+              <option value="offered">Offered</option>
+              <option value="hired">Hired</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Location
+            </label>
+            <select
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Locations</option>
+              {uniqueLocations.map((location) => (
+                <option key={location} value={location}>
+                  {location}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {(searchText || statusFilter !== 'all' || locationFilter !== 'all') && (
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Showing {filteredCandidates.length} of {candidates.length} candidates
+            </p>
+            <button
+              onClick={clearFilters}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Clear Filters
+            </button>
+          </div>
+        )}
+      </div>
+
       {candidates.length === 0 ? (
         <div className="bg-white rounded-lg shadow-md p-12 text-center">
           <svg
@@ -172,6 +333,30 @@ export default function CandidatesList() {
             className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-blue-700 transition"
           >
             Add First Candidate
+          </button>
+        </div>
+      ) : filteredCandidates.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-md p-12 text-center">
+          <svg
+            className="mx-auto h-12 w-12 text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <h3 className="mt-4 text-xl font-semibold text-gray-900">No candidates match your filters</h3>
+          <p className="mt-2 text-gray-600">Try adjusting your search or filters.</p>
+          <button
+            onClick={clearFilters}
+            className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-blue-700 transition"
+          >
+            Clear Filters
           </button>
         </div>
       ) : (
@@ -200,7 +385,7 @@ export default function CandidatesList() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {candidates.map((candidate) => (
+              {filteredCandidates.map((candidate) => (
                 <tr key={candidate.id} className="hover:bg-gray-50 transition">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
@@ -222,7 +407,7 @@ export default function CandidatesList() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    0
+                    {candidate.artifact_count || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <button

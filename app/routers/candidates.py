@@ -64,6 +64,7 @@ class CandidateResponse(BaseModel):
     status: str
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
+    artifact_count: int = 0
 
     class Config:
         from_attributes = True
@@ -126,7 +127,19 @@ def list_candidates(
         query = query.filter(Candidate.location.ilike(f"%{location}%"))
     
     candidates = query.all()
-    return candidates
+    
+    # Add artifact count for each candidate
+    result = []
+    for candidate in candidates:
+        artifact_count = db.query(CandidateArtifact).filter(
+            CandidateArtifact.candidate_id == candidate.id
+        ).count()
+        
+        candidate_dict = candidate.__dict__.copy()
+        candidate_dict['artifact_count'] = artifact_count
+        result.append(candidate_dict)
+    
+    return result
 
 
 @router.get("/{candidate_id}", response_model=CandidateDetailResponse)
