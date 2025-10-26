@@ -12,7 +12,10 @@ export default function App({ Component, pageProps }) {
                 <span className="font-bold text-xl">Recruitr</span>
               </Link>
               <Link href="/candidates" className="flex items-center px-3 py-2 hover:bg-blue-700 rounded-md transition">
-                Upload Candidates
+                Candidates
+              </Link>
+              <Link href="/candidates/upload" className="flex items-center px-3 py-2 hover:bg-blue-700 rounded-md transition">
+                Upload Resume
               </Link>
               <Link href="/jobs" className="flex items-center px-3 py-2 hover:bg-blue-700 rounded-md transition">
                 Rank Candidates

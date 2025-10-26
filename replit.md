@@ -83,8 +83,9 @@ The ranking system uses a weighted scoring model:
 
 #### Pages
 1. **Home (/)**: Welcome page with "Go to App" button
-2. **Upload Candidates (/candidates)**: Form to upload candidate resumes with name, email, and file upload
-3. **Rank Candidates (/jobs)**: Form to enter job description and rank all candidates
+2. **Candidates List (/candidates)**: Professional table listing all candidates with status badges, location, and action buttons
+3. **Upload Candidates (/candidates/upload)**: Form to upload candidate resumes with name, email, and file upload
+4. **Rank Candidates (/jobs)**: Form to enter job description and rank all candidates
 
 #### Features
 - Beautiful TailwindCSS styling with responsive design
