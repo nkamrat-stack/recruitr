@@ -48,9 +48,24 @@ Recruitr is a full-stack AI-powered recruiting application with a FastAPI backen
 - **feedback**: Stores hiring feedback for candidates (id, candidate_id, job_title, label)
 
 #### API Endpoints
+
+**Core Endpoints:**
 1. `GET /` - Root endpoint returns API status
-2. `POST /ingest/upload` - Upload candidate resumes (form data: name, email, file)
-3. `POST /match/rank` - Rank candidates against a job description
+2. `GET /health/openai` - Check OpenAI API key configuration
+3. `POST /test/analyze-text` - Test AI analysis with sample text
+
+**Candidates Router (`/candidates`):**
+1. `POST /candidates/` - Create new candidate with detailed info
+2. `GET /candidates/` - List all candidates (filter by status, location)
+3. `GET /candidates/{id}` - Get candidate with artifacts and profile
+4. `PUT /candidates/{id}` - Update candidate information
+5. `DELETE /candidates/{id}` - Soft delete candidate (status='deleted')
+6. `POST /candidates/{id}/artifacts` - Upload artifact with AI analysis
+7. `GET /candidates/{id}/artifacts` - List all artifacts for a candidate
+
+**Legacy Endpoints:**
+1. `POST /ingest/upload` - Upload candidate resumes (legacy)
+2. `POST /match/rank` - Rank candidates against a job description (legacy)
 
 #### Feature Extraction
 - **Skills Detection**: Regex-based extraction for: python, fastapi, react, postgres, docker, kubernetes
@@ -121,9 +136,14 @@ Both servers run automatically via separate workflows:
 ├── recruitr.db          # SQLite database (auto-created)
 ├── example_usage.md     # API usage examples
 ├── app/
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   └── candidates.py # Candidate management API router
 │   └── services/
 │       ├── __init__.py
 │       └── ai_service.py # OpenAI GPT-4o-mini integration for AI analysis
+├── uploads/
+│   └── artifacts/       # Storage for uploaded candidate files
 ├── frontend/
 │   ├── pages/
 │   │   ├── index.js     # Home page
