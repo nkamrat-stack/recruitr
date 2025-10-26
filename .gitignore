@@ -21,3 +21,9 @@ wheels/
 .pythonlibs/
 recruitr.db
 *.db
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+frontend/.env*.local

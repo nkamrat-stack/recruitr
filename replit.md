@@ -4,6 +4,13 @@
 Recruitr is a full-stack AI-powered recruiting application with a FastAPI backend and Next.js frontend. It helps rank and match candidates based on their resumes against job descriptions using a multi-factor scoring algorithm.
 
 ## Recent Changes
+- **October 26, 2025**: Reconfigured dual-server setup
+  - Separated Backend workflow (port 8000) and Frontend workflow (port 5000)
+  - Backend runs on internal port 8000 for API communication
+  - Frontend runs on port 5000 and connects to backend via localhost
+  - Fixed SQLAlchemy type casting issues in main.py
+  - Both workflows run simultaneously for integrated development
+  
 - **October 26, 2025**: Initial project creation
   - Created FastAPI backend with SQLite database
   - Implemented candidate upload and resume parsing
@@ -72,14 +79,21 @@ The ranking system uses a weighted scoring model:
 
 ## How to Run
 
-The frontend server starts automatically via the workflow on port 5000.
+Both servers run automatically via separate workflows:
+
+**Workflows:**
+- **Backend**: Runs FastAPI with Uvicorn on port 8000 (internal)
+  - Command: `uvicorn main:app --host 0.0.0.0 --port 8000`
+- **Frontend**: Runs Next.js dev server on port 5000 (webview)
+  - Command: `cd frontend && npm run dev`
 
 **Access the application:**
-- Frontend: http://localhost:5000/
-- Backend API (external): https://6882bd3d-c5e2-4421-9eef-9d1c1ced7776-00-vjrvbrzqocvv.riker.replit.dev
+- Frontend UI: View the webview (port 5000)
+- Backend API: The frontend connects to backend internally via http://localhost:8000
 
 **API Documentation:**
-- Swagger UI: https://6882bd3d-c5e2-4421-9eef-9d1c1ced7776-00-vjrvbrzqocvv.riker.replit.dev/docs
+- Access Swagger UI by opening the Backend workflow logs and clicking the docs URL
+- Endpoints: `/docs` for Swagger UI, `/redoc` for ReDoc
 
 ## File Structure
 ```
