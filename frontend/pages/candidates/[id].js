@@ -442,6 +442,342 @@ export default function CandidateDetail() {
         </div>
       </div>
 
+      {/* AI Profile Analysis Section */}
+      <div className="mb-8">
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-t-lg p-6 shadow-lg">
+          <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+            <span className="text-4xl">🤖</span> AI Profile Analysis
+          </h2>
+          <p className="text-purple-100 mt-2">Comprehensive AI-powered insights from all materials</p>
+        </div>
+        
+        {profileLoading ? (
+          <div className="bg-white rounded-b-lg shadow-lg p-12 text-center border-x-2 border-b-2 border-purple-200">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+            <p className="text-gray-600">Loading profile...</p>
+          </div>
+        ) : !profile ? (
+          <div className="bg-white rounded-b-lg shadow-lg p-12 text-center border-x-2 border-b-2 border-purple-200">
+            <div className="text-6xl mb-4">📊</div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">No AI Profile Generated Yet</h3>
+            <p className="text-gray-600 mb-2">
+              Materials available: <span className="font-bold text-purple-600">{artifacts.length}</span>
+            </p>
+            <p className="text-gray-500 mb-6 max-w-2xl mx-auto">
+              Generate a comprehensive AI analysis based on all uploaded materials. 
+              The AI will analyze skills, experience, communication style, and provide personalized insights.
+            </p>
+            <button
+              onClick={handleGenerateProfile}
+              disabled={generatingProfile || artifacts.length === 0}
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 transition shadow-lg"
+            >
+              {generatingProfile ? 'Generating Profile...' : 'Generate AI Profile from All Materials'}
+            </button>
+            {artifacts.length === 0 && (
+              <p className="text-orange-600 mt-4 text-sm font-medium">
+                ⚠️ Upload at least one material below to generate a profile
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="bg-white rounded-b-lg shadow-lg p-8 space-y-6 border-x-2 border-b-2 border-purple-200">
+            {/* Overall Summary Card */}
+            <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg p-8 text-white">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <p className="text-purple-200 text-sm mb-1">Best Role Fit</p>
+                  <p className="text-3xl font-bold">{profile.best_role_fit || 'Not specified'}</p>
+                </div>
+                <div>
+                  <p className="text-purple-200 text-sm mb-1">Years of Experience</p>
+                  <p className="text-3xl font-bold">{profile.years_experience || 0} years</p>
+                </div>
+                <div>
+                  <p className="text-purple-200 text-sm mb-2">Profile Completeness</p>
+                  <div className="w-full bg-purple-800 rounded-full h-4 mb-2">
+                    <div
+                      className="bg-white h-4 rounded-full transition-all"
+                      style={{ width: `${(profile.profile_completeness || 0) * 100}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-sm">{Math.round((profile.profile_completeness || 0) * 100)}% Complete</p>
+                </div>
+              </div>
+              {profile.last_ai_analysis && (
+                <p className="text-purple-200 text-sm mt-4">
+                  Last analyzed: {new Date(profile.last_ai_analysis).toLocaleString()}
+                </p>
+              )}
+            </div>
+
+            {/* Technical Skills Section */}
+            {profile.technical_skills && (
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg shadow-md p-8 border border-purple-200">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <span>💻</span> Technical Skills
+                </h3>
+                <div className="flex flex-wrap gap-3">
+                  {JSON.parse(profile.technical_skills).map((skill, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-gradient-to-r from-blue-100 to-purple-100 text-purple-800 px-5 py-2 rounded-full font-semibold text-lg shadow-sm"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quality Scores Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {profile.writing_quality_score !== null && (
+                <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-500 mb-3">✍️ Writing Quality</p>
+                  <div className="mb-3">
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all"
+                        style={{ width: `${(profile.writing_quality_score || 0) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {Math.round((profile.writing_quality_score || 0) * 100)}%
+                  </p>
+                </div>
+              )}
+              {profile.code_quality_score !== null && (
+                <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-500 mb-3">⚡ Code Quality</p>
+                  <div className="mb-3">
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-gradient-to-r from-blue-400 to-blue-600 h-3 rounded-full transition-all"
+                        style={{ width: `${(profile.code_quality_score || 0) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {Math.round((profile.code_quality_score || 0) * 100)}%
+                  </p>
+                </div>
+              )}
+              {profile.verbal_quality_score !== null && (
+                <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-500 mb-3">🗣️ Communication</p>
+                  <div className="mb-3">
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-gradient-to-r from-purple-400 to-purple-600 h-3 rounded-full transition-all"
+                        style={{ width: `${(profile.verbal_quality_score || 0) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {Math.round((profile.verbal_quality_score || 0) * 100)}%
+                  </p>
+                </div>
+              )}
+              {profile.growth_potential_score !== null && (
+                <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-500 mb-3">📈 Growth Potential</p>
+                  <div className="mb-3">
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full transition-all"
+                        style={{ width: `${(profile.growth_potential_score || 0) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {Math.round((profile.growth_potential_score || 0) * 100)}%
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Strengths Card */}
+            {profile.strengths && (
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg shadow-md p-8">
+                <h3 className="text-2xl font-bold text-green-900 mb-4 flex items-center gap-2">
+                  <span>💪</span> Strengths
+                </h3>
+                <p className="text-gray-800 text-lg leading-relaxed">{profile.strengths}</p>
+              </div>
+            )}
+
+            {/* Concerns Card */}
+            {profile.concerns && (
+              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-lg shadow-md p-8">
+                <h3 className="text-2xl font-bold text-orange-900 mb-4 flex items-center gap-2">
+                  <span>⚠️</span> Areas for Consideration
+                </h3>
+                <p className="text-gray-800 text-lg leading-relaxed">{profile.concerns}</p>
+              </div>
+            )}
+
+            {/* Culture Signals & Personality */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {profile.culture_signals && (
+                <div className="bg-white rounded-lg shadow-md p-8 border border-gray-200">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <span>🎯</span> Culture Signals
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {JSON.parse(profile.culture_signals).map((signal, idx) => (
+                      <span
+                        key={idx}
+                        className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-medium"
+                      >
+                        {signal}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {profile.personality_traits && (
+                <div className="bg-white rounded-lg shadow-md p-8 border border-gray-200">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <span>✨</span> Personality Traits
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {JSON.parse(profile.personality_traits).map((trait, idx) => (
+                      <span
+                        key={idx}
+                        className="bg-purple-100 text-purple-800 px-4 py-2 rounded-lg font-medium"
+                      >
+                        {trait}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Communication Style */}
+            {profile.communication_style && (
+              <div className="bg-white rounded-lg shadow-md p-8 border border-gray-200">
+                <h3 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <span>💬</span> Communication Style
+                </h3>
+                <p className="text-gray-700 text-lg">{profile.communication_style}</p>
+              </div>
+            )}
+
+            {/* Regenerate Profile Button */}
+            <div className="text-center pt-4 border-t-2 border-purple-100">
+              <button
+                onClick={handleGenerateProfile}
+                disabled={generatingProfile}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 transition shadow-lg"
+              >
+                {generatingProfile ? 'Regenerating Profile...' : '🔄 Regenerate Profile'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Materials List Section */}
+      <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Materials ({artifacts.length})</h2>
+        
+        {artifacts.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <p className="text-lg">No materials yet. Add some below!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {artifacts.map((artifact) => {
+              const skills = artifact.ai_extracted_skills ? JSON.parse(artifact.ai_extracted_skills) : []
+              const icon = ARTIFACT_ICONS[artifact.artifact_type] || '📎'
+              const isExpanded = expandedArtifacts[artifact.id]
+
+              return (
+                <div key={artifact.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition">
+                  <div className="flex items-start gap-4">
+                    <div className="text-4xl">{icon}</div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {artifact.title || artifact.artifact_type.replace(/_/g, ' ')}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            Uploaded {new Date(artifact.uploaded_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {artifact.ai_quality_score && (
+                            <div className="text-right">
+                              <p className="text-sm text-gray-500">Quality Score</p>
+                              <div className="flex items-center gap-2">
+                                <div className="w-24 bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="bg-blue-600 h-2 rounded-full"
+                                    style={{ width: `${artifact.ai_quality_score * 100}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-sm font-semibold text-gray-700">
+                                  {Math.round(artifact.ai_quality_score * 100)}%
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          {artifact.raw_url && (
+                            <a
+                              href={artifact.raw_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                            >
+                              View →
+                            </a>
+                          )}
+                          <button
+                            onClick={() => toggleArtifactExpansion(artifact.id)}
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            {isExpanded ? '▲' : '▼'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* AI Summary */}
+                      {artifact.ai_summary && (
+                        <div className="mt-3 bg-blue-50 rounded-lg p-4">
+                          <p className="text-sm font-semibold text-blue-900 mb-1">AI Summary:</p>
+                          <p className="text-sm text-gray-700">{artifact.ai_summary}</p>
+                        </div>
+                      )}
+
+                      {/* AI Skills */}
+                      {skills.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-sm font-semibold text-gray-700 mb-2">Extracted Skills:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {skills.map((skill, idx) => (
+                              <span
+                                key={idx}
+                                className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
+                              >
+                                {skill.name} ({Math.round(skill.confidence * 100)}%)
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Add Material Section */}
       <div className="bg-white rounded-lg shadow-lg p-8 mb-8 border-2 border-blue-100">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Add Material</h2>
@@ -562,12 +898,12 @@ export default function CandidateDetail() {
             disabled={uploading}
             className="w-full bg-blue-600 text-white px-6 py-4 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition"
           >
-            {uploading ? 'Uploading & Analyzing...' : 'Upload & Analyze with AI'}
+            {uploading ? 'Adding Material...' : 'Add Material'}
           </button>
 
           {uploadSuccess && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 font-medium">
-              ✓ Material uploaded and analyzed successfully!
+              ✓ Material added successfully!
             </div>
           )}
         </form>
@@ -674,235 +1010,6 @@ export default function CandidateDetail() {
         )}
       </div>
 
-      {/* AI Profile Analysis Section */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-6">AI Profile Analysis</h2>
-        
-        {profileLoading ? (
-          <div className="bg-white rounded-lg shadow-md p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
-            <p className="text-gray-600">Loading profile...</p>
-          </div>
-        ) : !profile ? (
-          <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg shadow-lg p-12 text-center text-white">
-            <div className="text-6xl mb-4">🤖</div>
-            <h3 className="text-2xl font-bold mb-3">AI Profile Not Generated Yet</h3>
-            <p className="text-purple-100 mb-6 max-w-2xl mx-auto">
-              Generate a comprehensive AI analysis based on all uploaded materials. 
-              The AI will analyze skills, experience, communication style, and provide personalized insights.
-            </p>
-            <button
-              onClick={handleGenerateProfile}
-              disabled={generatingProfile || artifacts.length === 0}
-              className="bg-white text-purple-600 px-8 py-4 rounded-lg font-bold text-lg hover:bg-purple-50 disabled:bg-gray-300 disabled:text-gray-500 transition shadow-lg"
-            >
-              {generatingProfile ? 'Generating Profile...' : 'Generate Profile with AI ✨'}
-            </button>
-            {artifacts.length === 0 && (
-              <p className="text-purple-200 mt-4 text-sm">
-                Upload at least one material to generate a profile
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Overall Summary Card */}
-            <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg p-8 text-white">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <p className="text-purple-200 text-sm mb-1">Best Role Fit</p>
-                  <p className="text-3xl font-bold">{profile.best_role_fit || 'Not specified'}</p>
-                </div>
-                <div>
-                  <p className="text-purple-200 text-sm mb-1">Years of Experience</p>
-                  <p className="text-3xl font-bold">{profile.years_experience || 0} years</p>
-                </div>
-                <div>
-                  <p className="text-purple-200 text-sm mb-2">Profile Completeness</p>
-                  <div className="w-full bg-purple-800 rounded-full h-4 mb-2">
-                    <div
-                      className="bg-white h-4 rounded-full transition-all"
-                      style={{ width: `${(profile.profile_completeness || 0) * 100}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-sm">{Math.round((profile.profile_completeness || 0) * 100)}% Complete</p>
-                </div>
-              </div>
-              {profile.last_ai_analysis && (
-                <p className="text-purple-200 text-sm mt-4">
-                  Last analyzed: {new Date(profile.last_ai_analysis).toLocaleString()}
-                </p>
-              )}
-            </div>
-
-            {/* Technical Skills Section */}
-            {profile.technical_skills && (
-              <div className="bg-white rounded-lg shadow-md p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <span>💻</span> Technical Skills
-                </h3>
-                <div className="flex flex-wrap gap-3">
-                  {JSON.parse(profile.technical_skills).map((skill, idx) => (
-                    <span
-                      key={idx}
-                      className="bg-gradient-to-r from-blue-100 to-purple-100 text-purple-800 px-5 py-2 rounded-full font-semibold text-lg shadow-sm"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Quality Scores Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {profile.writing_quality_score !== null && (
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <p className="text-sm font-semibold text-gray-500 mb-3">✍️ Writing Quality</p>
-                  <div className="mb-3">
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all"
-                        style={{ width: `${(profile.writing_quality_score || 0) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {Math.round((profile.writing_quality_score || 0) * 100)}%
-                  </p>
-                </div>
-              )}
-              {profile.code_quality_score !== null && (
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <p className="text-sm font-semibold text-gray-500 mb-3">⚡ Code Quality</p>
-                  <div className="mb-3">
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className="bg-gradient-to-r from-blue-400 to-blue-600 h-3 rounded-full transition-all"
-                        style={{ width: `${(profile.code_quality_score || 0) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {Math.round((profile.code_quality_score || 0) * 100)}%
-                  </p>
-                </div>
-              )}
-              {profile.verbal_quality_score !== null && (
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <p className="text-sm font-semibold text-gray-500 mb-3">🗣️ Communication</p>
-                  <div className="mb-3">
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className="bg-gradient-to-r from-purple-400 to-purple-600 h-3 rounded-full transition-all"
-                        style={{ width: `${(profile.verbal_quality_score || 0) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {Math.round((profile.verbal_quality_score || 0) * 100)}%
-                  </p>
-                </div>
-              )}
-              {profile.growth_potential_score !== null && (
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <p className="text-sm font-semibold text-gray-500 mb-3">📈 Growth Potential</p>
-                  <div className="mb-3">
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full transition-all"
-                        style={{ width: `${(profile.growth_potential_score || 0) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {Math.round((profile.growth_potential_score || 0) * 100)}%
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Strengths Card */}
-            {profile.strengths && (
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg shadow-md p-8">
-                <h3 className="text-2xl font-bold text-green-900 mb-4 flex items-center gap-2">
-                  <span>💪</span> Strengths
-                </h3>
-                <p className="text-gray-800 text-lg leading-relaxed">{profile.strengths}</p>
-              </div>
-            )}
-
-            {/* Concerns Card */}
-            {profile.concerns && (
-              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-lg shadow-md p-8">
-                <h3 className="text-2xl font-bold text-orange-900 mb-4 flex items-center gap-2">
-                  <span>⚠️</span> Areas for Consideration
-                </h3>
-                <p className="text-gray-800 text-lg leading-relaxed">{profile.concerns}</p>
-              </div>
-            )}
-
-            {/* Culture Signals & Personality */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {profile.culture_signals && (
-                <div className="bg-white rounded-lg shadow-md p-8">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <span>🎯</span> Culture Signals
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {JSON.parse(profile.culture_signals).map((signal, idx) => (
-                      <span
-                        key={idx}
-                        className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-medium"
-                      >
-                        {signal}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {profile.personality_traits && (
-                <div className="bg-white rounded-lg shadow-md p-8">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <span>✨</span> Personality Traits
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {JSON.parse(profile.personality_traits).map((trait, idx) => (
-                      <span
-                        key={idx}
-                        className="bg-purple-100 text-purple-800 px-4 py-2 rounded-lg font-medium"
-                      >
-                        {trait}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Communication Style */}
-            {profile.communication_style && (
-              <div className="bg-white rounded-lg shadow-md p-8">
-                <h3 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <span>💬</span> Communication Style
-                </h3>
-                <p className="text-gray-700 text-lg">{profile.communication_style}</p>
-              </div>
-            )}
-
-            {/* Regenerate Profile Button */}
-            <div className="text-center pt-4">
-              <button
-                onClick={handleGenerateProfile}
-                disabled={generatingProfile}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 transition shadow-lg"
-              >
-                {generatingProfile ? 'Regenerating Profile...' : '🔄 Regenerate Profile'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   )
 }

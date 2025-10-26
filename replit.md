@@ -4,23 +4,22 @@
 Recruitr is a full-stack AI-powered recruiting application with a FastAPI backend and Next.js frontend. It helps rank and match candidates based on their resumes against job descriptions using a multi-factor scoring algorithm.
 
 ## Recent Changes
-- **October 26, 2025**: Candidate Detail Page - AI Profile Analysis Display
-  - Added comprehensive AI Profile Analysis section to candidate detail page
-  - Automatically fetches profile when loading candidate detail page
-  - If no profile exists: Shows beautiful purple gradient card with "Generate Profile with AI" button
-  - Disables generation if no materials uploaded (with helper message)
-  - If profile exists: Displays comprehensive multi-section profile:
-    * Overall Summary Card (gradient header with role fit, experience, completeness bar)
-    * Technical Skills Section with gradient badges
-    * Quality Scores Grid (4 cards with animated progress bars: Writing, Code, Communication, Growth)
-    * Strengths Card (green gradient background)
-    * Areas for Consideration Card (yellow/orange gradient, replaces "Concerns")
-    * Culture Signals & Personality Traits (side-by-side cards with tags)
-    * Communication Style card
-    * Regenerate Profile button at bottom
-  - Loading state with spinner while profile loads
-  - Professional gradients, shadows, icons, and animations throughout
-  - Shows last analysis timestamp and profile version
+- **October 26, 2025**: Redesigned Candidate Detail Page - Separated Material Collection from AI Analysis
+  - **Page Structure Redesign**: Moved AI Profile section to prominent position ABOVE materials list
+  - **New Page Order**: Header → Key Info Cards → Compliance Checklist → 🤖 AI PROFILE (star section) → Materials List → Add Material (bottom)
+  - **AI Profile Section Features**:
+    * Purple-to-indigo gradient header with 🤖 emoji and subtitle
+    * When NO profile: Shows materials count, "Generate AI Profile from All Materials" button, warning if no materials
+    * When profile EXISTS: Complete multi-section profile with Overall Summary, Technical Skills, Quality Scores, Strengths, Concerns, Culture Signals, Personality, Communication Style
+    * Regenerate Profile button at bottom with border separator
+  - **Material Collection Workflow** (separated from AI):
+    * "Add Material" section moved to bottom of page (no AI mentions)
+    * Button text changed from "Upload & Analyze with AI" to just "Add Material"
+    * Success message: "Material added successfully!" (removed AI reference)
+    * Three tabs: Upload File, Paste URL, Paste Text
+    * Context-aware material type dropdown based on upload method
+  - **Materials List Section**: Simple list between AI Profile and Add Material sections
+  - **Clear Workflow Separation**: Material collection is distinct from AI analysis - AI Profile is the showcase
 
 - **October 26, 2025**: Added Profile Generation Endpoints
   - Created POST /candidates/{id}/generate-profile endpoint
