@@ -148,7 +148,7 @@ def rank_candidates(job_desc: JobDescription, db: Session = Depends(get_db)):
         if not artifacts:
             continue
         
-        resume_text = " ".join([a.text for a in artifacts])
+        resume_text = " ".join([artifact.text for artifact in artifacts])
         
         candidate_skills = extract_skills(resume_text)
         culture_signals = extract_culture_signals(resume_text)
@@ -177,9 +177,9 @@ def rank_candidates(job_desc: JobDescription, db: Session = Depends(get_db)):
         evidence = get_evidence_snippets(resume_text, all_keywords[:5])
         
         results.append(CandidateScore(
-            id=candidate.id,
-            name=candidate.name,
-            email=candidate.email,
+            id=int(candidate.id),
+            name=str(candidate.name),
+            email=str(candidate.email),
             overall_score=round(overall_score, 3),
             skills_score=round(skills_score, 3),
             culture_score=round(culture_score, 3),
@@ -197,4 +197,4 @@ def rank_candidates(job_desc: JobDescription, db: Session = Depends(get_db)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
