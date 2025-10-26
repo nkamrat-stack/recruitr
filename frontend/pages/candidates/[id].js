@@ -283,6 +283,122 @@ export default function CandidateDetail() {
         </div>
       </div>
 
+      {/* Compliance Checklist Section */}
+      <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Required Materials</h2>
+          <span className={`px-4 py-2 rounded-full font-semibold ${
+            (() => {
+              const hasResume = artifacts.some(a => a.artifact_type?.toLowerCase().includes('resume'))
+              const hasVideo = artifacts.some(a => a.artifact_type?.toLowerCase().includes('loom') || a.artifact_type?.toLowerCase().includes('video'))
+              const hasGoogleDoc = artifacts.some(a => a.artifact_type?.toLowerCase().includes('google_doc'))
+              const hasEmail = artifacts.some(a => a.artifact_type?.toLowerCase().includes('email'))
+              const completedCount = [hasResume, hasVideo, hasGoogleDoc, hasEmail].filter(Boolean).length
+              return completedCount === 4 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+            })()
+          }`}>
+            {(() => {
+              const hasResume = artifacts.some(a => a.artifact_type?.toLowerCase().includes('resume'))
+              const hasVideo = artifacts.some(a => a.artifact_type?.toLowerCase().includes('loom') || a.artifact_type?.toLowerCase().includes('video'))
+              const hasGoogleDoc = artifacts.some(a => a.artifact_type?.toLowerCase().includes('google_doc'))
+              const hasEmail = artifacts.some(a => a.artifact_type?.toLowerCase().includes('email'))
+              const completedCount = [hasResume, hasVideo, hasGoogleDoc, hasEmail].filter(Boolean).length
+              return `${completedCount}/4 Complete`
+            })()}
+          </span>
+        </div>
+
+        <div className="space-y-3">
+          {/* Resume Check */}
+          {(() => {
+            const hasResume = artifacts.some(a => a.artifact_type?.toLowerCase().includes('resume'))
+            return (
+              <div className={`flex items-center gap-4 p-4 rounded-lg ${
+                hasResume ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+              }`}>
+                <div className="text-2xl">
+                  {hasResume ? '✅' : '⭕'}
+                </div>
+                <div className="flex-1">
+                  <p className={`font-semibold ${hasResume ? 'text-green-900' : 'text-gray-700'}`}>
+                    Resume Submitted
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {hasResume ? 'Resume has been uploaded' : 'Waiting for resume upload'}
+                  </p>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Loom Video Check */}
+          {(() => {
+            const hasVideo = artifacts.some(a => a.artifact_type?.toLowerCase().includes('loom') || a.artifact_type?.toLowerCase().includes('video'))
+            return (
+              <div className={`flex items-center gap-4 p-4 rounded-lg ${
+                hasVideo ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+              }`}>
+                <div className="text-2xl">
+                  {hasVideo ? '✅' : '⭕'}
+                </div>
+                <div className="flex-1">
+                  <p className={`font-semibold ${hasVideo ? 'text-green-900' : 'text-gray-700'}`}>
+                    Loom Video Submitted
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {hasVideo ? 'Video has been uploaded' : 'Waiting for Loom video'}
+                  </p>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Google Doc Check */}
+          {(() => {
+            const hasGoogleDoc = artifacts.some(a => a.artifact_type?.toLowerCase().includes('google_doc'))
+            return (
+              <div className={`flex items-center gap-4 p-4 rounded-lg ${
+                hasGoogleDoc ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+              }`}>
+                <div className="text-2xl">
+                  {hasGoogleDoc ? '✅' : '⭕'}
+                </div>
+                <div className="flex-1">
+                  <p className={`font-semibold ${hasGoogleDoc ? 'text-green-900' : 'text-gray-700'}`}>
+                    Google Doc Response
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {hasGoogleDoc ? 'Google Doc has been submitted' : 'Waiting for Google Doc response'}
+                  </p>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Email Check */}
+          {(() => {
+            const hasEmail = artifacts.some(a => a.artifact_type?.toLowerCase().includes('email'))
+            return (
+              <div className={`flex items-center gap-4 p-4 rounded-lg ${
+                hasEmail ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+              }`}>
+                <div className="text-2xl">
+                  {hasEmail ? '✅' : '⭕'}
+                </div>
+                <div className="flex-1">
+                  <p className={`font-semibold ${hasEmail ? 'text-green-900' : 'text-gray-700'}`}>
+                    Email Response
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {hasEmail ? 'Email response has been received' : 'Waiting for email response'}
+                  </p>
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+      </div>
+
       {/* Add Material Section */}
       <div className="bg-white rounded-lg shadow-lg p-8 mb-8 border-2 border-blue-100">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Add Material</h2>

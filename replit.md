@@ -4,6 +4,16 @@
 Recruitr is a full-stack AI-powered recruiting application with a FastAPI backend and Next.js frontend. It helps rank and match candidates based on their resumes against job descriptions using a multi-factor scoring algorithm.
 
 ## Recent Changes
+- **October 26, 2025**: Candidate Detail Page - Added Compliance Checklist
+  - Created "Required Materials" section between Key Info Cards and Add Material section
+  - Tracks 4 required materials: Resume, Loom Video, Google Doc Response, Email Response
+  - Shows completion count (e.g., "1/4 Complete" or "4/4 Complete")
+  - Green checkmark ✅ for submitted items with green background
+  - Gray circle ⭕ for missing items with gray background
+  - Yellow badge when incomplete, green badge when all 4 complete
+  - Dynamically calculates from candidate's artifacts array
+  - Professional TailwindCSS styling with subtle shadows
+
 - **October 26, 2025**: Candidates List Page Enhanced with Metrics & Filters
   - Added 4 colorful metrics cards: Total Candidates, New Candidates, In Review, With Materials
   - Implemented filters bar with search (by name/email), status dropdown, and location dropdown
