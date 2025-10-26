@@ -4,6 +4,23 @@
 Recruitr is a full-stack AI-powered recruiting application with a FastAPI backend and Next.js frontend. It helps rank and match candidates based on their resumes against job descriptions using a multi-factor scoring algorithm.
 
 ## Recent Changes
+- **October 26, 2025**: AI Service Module Created
+  - Created `app/services/ai_service.py` with GPT-4o-mini integration
+  - Implemented 4 AI functions: get_openai_client, analyze_artifact, generate_candidate_profile, score_candidate_for_job
+  - Upgraded OpenAI library from 1.12.0 to 2.6.1
+  - All functions use JSON mode for structured outputs with temperature 0.3
+  - Comprehensive error handling and logging throughout
+  - Ready for AI-powered resume analysis and candidate matching
+
+- **October 26, 2025**: Database Schema Overhaul
+  - Enhanced candidates table with 13 new fields (contact info, salary expectations, location, visa status, etc.)
+  - Created candidate_artifacts table for storing resumes, videos, code samples (with artifact_metadata field)
+  - Created candidate_profiles table with AI analysis fields (technical skills, quality scores, culture signals, etc.)
+  - Created jobs table for job postings with requirements
+  - Created matches table for AI-powered candidate-job scoring
+  - Enhanced feedback table with outcomes and recruiter ratings
+  - All 7 tables successfully created and verified in SQLite database
+
 - **October 26, 2025**: Reconfigured dual-server setup
   - Separated Backend workflow (port 8000) and Frontend workflow (port 5000)
   - Backend runs on port 8000 with automatic HTTPS support via Replit
@@ -100,9 +117,13 @@ Both servers run automatically via separate workflows:
 ```
 .
 ├── main.py              # FastAPI application and endpoints
-├── database.py          # SQLAlchemy models and database setup
+├── database.py          # SQLAlchemy models and database setup (7 tables)
 ├── recruitr.db          # SQLite database (auto-created)
 ├── example_usage.md     # API usage examples
+├── app/
+│   └── services/
+│       ├── __init__.py
+│       └── ai_service.py # OpenAI GPT-4o-mini integration for AI analysis
 ├── frontend/
 │   ├── pages/
 │   │   ├── index.js     # Home page
@@ -114,6 +135,7 @@ Both servers run automatically via separate workflows:
 │   ├── package.json     # Node.js dependencies
 │   ├── tailwind.config.js
 │   └── postcss.config.js
+├── pyproject.toml       # Python dependencies
 ├── replit.md            # This file
 └── .gitignore           # Git ignore patterns
 ```
