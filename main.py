@@ -26,6 +26,23 @@ def startup_event():
 def root():
     return {"message": "Recruitr API"}
 
+@app.get("/health/openai")
+def check_openai_key():
+    import os
+    key = os.environ.get('OPENAI_API_KEY')
+    if key:
+        return {
+            "status": "ok",
+            "key_configured": True,
+            "key_preview": f"{key[:10]}...{key[-4:]}"
+        }
+    else:
+        return {
+            "status": "error", 
+            "key_configured": False,
+            "message": "OPENAI_API_KEY not found"
+        }
+
 SKILLS_KEYWORDS = ["python", "fastapi", "react", "postgres", "docker", "kubernetes"]
 CULTURE_KEYWORDS = ["shipped", "launched", "owned", "documented"]
 
