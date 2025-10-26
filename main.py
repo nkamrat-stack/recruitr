@@ -43,6 +43,12 @@ def check_openai_key():
             "message": "OPENAI_API_KEY not found"
         }
 
+@app.post("/test/analyze-text")
+def test_analyze_artifact(text: str):
+    from app.services.ai_service import analyze_artifact
+    result = analyze_artifact(text, "resume_text")
+    return result
+
 SKILLS_KEYWORDS = ["python", "fastapi", "react", "postgres", "docker", "kubernetes"]
 CULTURE_KEYWORDS = ["shipped", "launched", "owned", "documented"]
 
