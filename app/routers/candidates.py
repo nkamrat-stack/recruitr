@@ -7,7 +7,7 @@ import os
 import json
 
 from database import get_db, Candidate, CandidateArtifact, CandidateProfile
-from app.services.ai_service import analyze_artifact
+from app.services.ai_service import analyze_artifact, generate_candidate_profile
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
 
@@ -90,6 +90,30 @@ class ArtifactResponse(BaseModel):
 class CandidateDetailResponse(CandidateResponse):
     artifacts: List[ArtifactResponse] = []
     profile: Optional[dict] = None
+
+
+class ProfileResponse(BaseModel):
+    id: int
+    candidate_id: int
+    technical_skills: Optional[str]
+    years_experience: Optional[float]
+    writing_quality_score: Optional[float]
+    verbal_quality_score: Optional[float]
+    communication_style: Optional[str]
+    portfolio_quality_score: Optional[float]
+    code_quality_score: Optional[float]
+    culture_signals: Optional[str]
+    personality_traits: Optional[str]
+    strengths: Optional[str]
+    concerns: Optional[str]
+    best_role_fit: Optional[str]
+    growth_potential_score: Optional[float]
+    profile_completeness: Optional[float]
+    last_ai_analysis: Optional[datetime]
+    profile_version: Optional[int]
+
+    class Config:
+        from_attributes = True
 
 
 @router.post("/", response_model=CandidateResponse)
@@ -228,6 +252,103 @@ def delete_candidate(candidate_id: int, db: Session = Depends(get_db)):
     db.commit()
     
     return {"message": "Candidate deleted successfully", "id": candidate_id}
+
+
+@router.post("/{candidate_id}/generate-profile", response_model=ProfileResponse)
+def generate_profile(candidate_id: int, db: Session = Depends(get_db)):
+    """
+    Generate an AI profile for a candidate based on all their artifacts.
+    This creates or updates the candidate's profile in the candidate_profiles table.
+    """
+    # Fetch the candidate
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    # Get all artifacts for this candidate
+    artifacts = db.query(CandidateArtifact).filter(
+        CandidateArtifact.candidate_id == candidate_id
+    ).all()
+    
+    if not artifacts:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot generate profile: No artifacts found for this candidate"
+        )
+    
+    # Prepare artifact data for AI analysis
+    artifacts_data = []
+    for artifact in artifacts:
+        artifact_info = {
+            "artifact_type": artifact.artifact_type,
+            "title": artifact.title,
+            "ai_summary": artifact.ai_summary,
+            "ai_extracted_skills": artifact.ai_extracted_skills,
+            "ai_quality_score": artifact.ai_quality_score,
+            "raw_text": artifact.raw_text[:2000] if artifact.raw_text else None,
+            "raw_url": artifact.raw_url
+        }
+        artifacts_data.append(artifact_info)
+    
+    # Generate profile using AI service
+    try:
+        profile_data = generate_candidate_profile(artifacts_data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate profile: {str(e)}"
+        )
+    
+    # Check if profile already exists
+    existing_profile = db.query(CandidateProfile).filter(
+        CandidateProfile.candidate_id == candidate_id
+    ).first()
+    
+    if existing_profile:
+        # Update existing profile
+        for key, value in profile_data.items():
+            setattr(existing_profile, key, value)
+        existing_profile.last_ai_analysis = datetime.utcnow()
+        existing_profile.profile_version += 1
+        db.commit()
+        db.refresh(existing_profile)
+        return existing_profile
+    else:
+        # Create new profile
+        new_profile = CandidateProfile(
+            candidate_id=candidate_id,
+            last_ai_analysis=datetime.utcnow(),
+            **profile_data
+        )
+        db.add(new_profile)
+        db.commit()
+        db.refresh(new_profile)
+        return new_profile
+
+
+@router.get("/{candidate_id}/profile", response_model=ProfileResponse)
+def get_profile(candidate_id: int, db: Session = Depends(get_db)):
+    """
+    Get the AI-generated profile for a candidate.
+    Returns 404 if the profile has not been generated yet.
+    """
+    # Verify candidate exists
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    # Get profile
+    profile = db.query(CandidateProfile).filter(
+        CandidateProfile.candidate_id == candidate_id
+    ).first()
+    
+    if not profile:
+        raise HTTPException(
+            status_code=404,
+            detail="Profile not generated yet. Use POST /candidates/{id}/generate-profile to create one."
+        )
+    
+    return profile
 
 
 @router.post("/{candidate_id}/artifacts", response_model=ArtifactResponse)

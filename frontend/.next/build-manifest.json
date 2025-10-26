@@ -27,10 +27,10 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/candidates/[id]": [
+    "/candidates": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/candidates/[id].js"
+      "static/chunks/pages/candidates.js"
     ]
   },
   "ampFirstPages": []

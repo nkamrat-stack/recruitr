@@ -4,6 +4,17 @@
 Recruitr is a full-stack AI-powered recruiting application with a FastAPI backend and Next.js frontend. It helps rank and match candidates based on their resumes against job descriptions using a multi-factor scoring algorithm.
 
 ## Recent Changes
+- **October 26, 2025**: Added Profile Generation Endpoints
+  - Created POST /candidates/{id}/generate-profile endpoint
+  - Fetches all candidate artifacts and generates comprehensive AI profile
+  - Calls ai_service.generate_candidate_profile() with artifact summaries
+  - Stores profile in candidate_profiles table (creates or updates)
+  - Returns ProfileResponse with all profile fields
+  - Created GET /candidates/{id}/profile endpoint
+  - Returns existing profile or 404 if not generated
+  - Added ProfileResponse Pydantic model with all profile fields
+  - Proper error handling: 404 for missing candidate, 400 for no artifacts, 500 for AI failures
+
 - **October 26, 2025**: Candidate Detail Page - Added Compliance Checklist
   - Created "Required Materials" section between Key Info Cards and Add Material section
   - Tracks 4 required materials: Resume, Loom Video, Google Doc Response, Email Response
@@ -80,6 +91,8 @@ Recruitr is a full-stack AI-powered recruiting application with a FastAPI backen
 5. `DELETE /candidates/{id}` - Soft delete candidate (status='deleted')
 6. `POST /candidates/{id}/artifacts` - Upload artifact with AI analysis
 7. `GET /candidates/{id}/artifacts` - List all artifacts for a candidate
+8. `POST /candidates/{id}/generate-profile` - Generate AI profile from all artifacts
+9. `GET /candidates/{id}/profile` - Get candidate's AI-generated profile
 
 **Legacy Endpoints:**
 1. `POST /ingest/upload` - Upload candidate resumes (legacy)
