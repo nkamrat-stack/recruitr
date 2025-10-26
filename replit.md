@@ -4,6 +4,24 @@
 Recruitr is a full-stack AI-powered recruiting application with a FastAPI backend and Next.js frontend. It helps rank and match candidates based on their resumes against job descriptions using a multi-factor scoring algorithm.
 
 ## Recent Changes
+- **October 26, 2025**: Candidate Detail Page - AI Profile Analysis Display
+  - Added comprehensive AI Profile Analysis section to candidate detail page
+  - Automatically fetches profile when loading candidate detail page
+  - If no profile exists: Shows beautiful purple gradient card with "Generate Profile with AI" button
+  - Disables generation if no materials uploaded (with helper message)
+  - If profile exists: Displays comprehensive multi-section profile:
+    * Overall Summary Card (gradient header with role fit, experience, completeness bar)
+    * Technical Skills Section with gradient badges
+    * Quality Scores Grid (4 cards with animated progress bars: Writing, Code, Communication, Growth)
+    * Strengths Card (green gradient background)
+    * Areas for Consideration Card (yellow/orange gradient, replaces "Concerns")
+    * Culture Signals & Personality Traits (side-by-side cards with tags)
+    * Communication Style card
+    * Regenerate Profile button at bottom
+  - Loading state with spinner while profile loads
+  - Professional gradients, shadows, icons, and animations throughout
+  - Shows last analysis timestamp and profile version
+
 - **October 26, 2025**: Added Profile Generation Endpoints
   - Created POST /candidates/{id}/generate-profile endpoint
   - Fetches all candidate artifacts and generates comprehensive AI profile
