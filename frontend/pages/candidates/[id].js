@@ -10,20 +10,36 @@ const getBackendURL = () => {
 
 const BACKEND_URL = getBackendURL()
 
-const ARTIFACT_TYPES = [
-  'resume_pdf',
-  'loom_video',
-  'google_doc_response',
-  'email_thread',
-  'portfolio_url',
-  'github_url',
-  'code_sample',
-  'project_demo',
-  'other',
+const FILE_ARTIFACT_TYPES = [
+  { value: 'resume_pdf', label: 'Resume PDF' },
+  { value: 'code_sample', label: 'Code Sample File' },
+  { value: 'case_study_pdf', label: 'Case Study PDF' },
+  { value: 'design_portfolio', label: 'Design Portfolio' },
+  { value: 'other_document', label: 'Other Document' },
+]
+
+const URL_ARTIFACT_TYPES = [
+  { value: 'loom_video', label: 'Loom Video URL' },
+  { value: 'portfolio_url', label: 'Portfolio Website' },
+  { value: 'github_url', label: 'GitHub Repository' },
+  { value: 'linkedin_profile', label: 'LinkedIn Profile' },
+  { value: 'project_demo', label: 'Project Demo URL' },
+  { value: 'other_url', label: 'Other URL' },
+]
+
+const TEXT_ARTIFACT_TYPES = [
+  { value: 'resume_text', label: 'Resume Text' },
+  { value: 'email_thread', label: 'Email Thread' },
+  { value: 'google_doc_response', label: 'Google Doc Response' },
+  { value: 'interview_notes', label: 'Interview Notes' },
+  { value: 'reference_check', label: 'Reference Check' },
+  { value: 'meeting_transcript', label: 'Meeting Transcript' },
+  { value: 'other_text', label: 'Other Text' },
 ]
 
 const ARTIFACT_ICONS = {
   resume_pdf: '📄',
+  resume_text: '📄',
   loom_video: '🎥',
   google_doc_response: '📝',
   email_thread: '📧',
@@ -31,7 +47,15 @@ const ARTIFACT_ICONS = {
   github_url: '💻',
   code_sample: '⚡',
   project_demo: '🚀',
-  other: '📎',
+  case_study_pdf: '📊',
+  design_portfolio: '🎨',
+  linkedin_profile: '👤',
+  interview_notes: '📋',
+  reference_check: '✅',
+  meeting_transcript: '🗣️',
+  other_document: '📎',
+  other_url: '🔗',
+  other_text: '📝',
 }
 
 export default function CandidateDetail() {
@@ -52,6 +76,26 @@ export default function CandidateDetail() {
   const [uploadSuccess, setUploadSuccess] = useState(false)
 
   const [expandedArtifacts, setExpandedArtifacts] = useState({})
+
+  // Get artifact types based on upload method
+  const getArtifactTypes = () => {
+    if (uploadMethod === 'file') return FILE_ARTIFACT_TYPES
+    if (uploadMethod === 'url') return URL_ARTIFACT_TYPES
+    if (uploadMethod === 'text') return TEXT_ARTIFACT_TYPES
+    return FILE_ARTIFACT_TYPES
+  }
+
+  // Handle tab change and reset artifact type to first option
+  const handleTabChange = (method) => {
+    setUploadMethod(method)
+    if (method === 'file') {
+      setArtifactType('resume_pdf')
+    } else if (method === 'url') {
+      setArtifactType('loom_video')
+    } else if (method === 'text') {
+      setArtifactType('resume_text')
+    }
+  }
 
   useEffect(() => {
     if (id) {
@@ -246,7 +290,7 @@ export default function CandidateDetail() {
         {/* Upload Method Tabs */}
         <div className="flex gap-4 mb-6 border-b border-gray-200">
           <button
-            onClick={() => setUploadMethod('file')}
+            onClick={() => handleTabChange('file')}
             className={`px-6 py-3 font-semibold transition ${
               uploadMethod === 'file'
                 ? 'text-blue-600 border-b-2 border-blue-600'
@@ -256,7 +300,7 @@ export default function CandidateDetail() {
             Upload File
           </button>
           <button
-            onClick={() => setUploadMethod('url')}
+            onClick={() => handleTabChange('url')}
             className={`px-6 py-3 font-semibold transition ${
               uploadMethod === 'url'
                 ? 'text-blue-600 border-b-2 border-blue-600'
@@ -266,7 +310,7 @@ export default function CandidateDetail() {
             Paste URL
           </button>
           <button
-            onClick={() => setUploadMethod('text')}
+            onClick={() => handleTabChange('text')}
             className={`px-6 py-3 font-semibold transition ${
               uploadMethod === 'text'
                 ? 'text-blue-600 border-b-2 border-blue-600'
@@ -332,9 +376,9 @@ export default function CandidateDetail() {
                 onChange={(e) => setArtifactType(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                {ARTIFACT_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                {getArtifactTypes().map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
                   </option>
                 ))}
               </select>
@@ -382,7 +426,7 @@ export default function CandidateDetail() {
           <div className="space-y-4">
             {artifacts.map((artifact) => {
               const skills = artifact.ai_extracted_skills ? JSON.parse(artifact.ai_extracted_skills) : []
-              const icon = ARTIFACT_ICONS[artifact.artifact_type] || ARTIFACT_ICONS.other
+              const icon = ARTIFACT_ICONS[artifact.artifact_type] || '📎'
               const isExpanded = expandedArtifacts[artifact.id]
 
               return (
