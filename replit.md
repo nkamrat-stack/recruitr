@@ -6,8 +6,8 @@ Recruitr is a full-stack AI-powered recruiting application with a FastAPI backen
 ## Recent Changes
 - **October 26, 2025**: Reconfigured dual-server setup
   - Separated Backend workflow (port 8000) and Frontend workflow (port 5000)
-  - Backend runs on internal port 8000 for API communication
-  - Frontend runs on port 5000 and connects to backend via localhost
+  - Backend runs on port 8000 with public HTTPS access
+  - Frontend runs on port 5000 and connects to backend via public URL
   - Fixed SQLAlchemy type casting issues in main.py
   - Both workflows run simultaneously for integrated development
   
@@ -89,7 +89,7 @@ Both servers run automatically via separate workflows:
 
 **Access the application:**
 - Frontend UI: View the webview (port 5000)
-- Backend API: The frontend connects to backend internally via http://localhost:8000
+- Backend API: http://6882bd3d-c5e2-4421-9eef-9d1c1ced7776-00-vjrvbrzqocvv.riker.replit.dev:8000
 
 **API Documentation:**
 - Access Swagger UI by opening the Backend workflow logs and clicking the docs URL

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const BACKEND_URL = 'http://localhost:8000'
+const BACKEND_URL = 'http://6882bd3d-c5e2-4421-9eef-9d1c1ced7776-00-vjrvbrzqocvv.riker.replit.dev:8000'
 
 export default function Jobs() {
   const [jobTitle, setJobTitle] = useState('')
