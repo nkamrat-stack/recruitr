@@ -1,15 +1,8 @@
 import { useState } from 'react'
 
-const getBackendURL = () => {
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname
-    return `https://${hostname.replace('-5000.', '-8000.')}`
-  }
-  return ''
-}
+const BACKEND_URL = 'https://6882bd3d-c5e2-4421-9eef-9d1c1ced7776-00-vjrvbrzqocvv.riker.replit.dev'
 
 export default function Candidates() {
-  const BACKEND_URL = getBackendURL()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [file, setFile] = useState(null)
