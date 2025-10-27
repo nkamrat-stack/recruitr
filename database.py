@@ -154,6 +154,20 @@ class Feedback(Base):
     candidate = relationship("Candidate", back_populates="feedbacks")
     job = relationship("Job", back_populates="feedbacks")
 
+class CompanyProfile(Base):
+    __tablename__ = "company_profile"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    company_name = Column(Text, nullable=False)
+    about_company = Column(Text)
+    mission = Column(Text)
+    vision = Column(Text)
+    values = Column(Text)
+    culture_description = Column(Text)
+    website_url = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 
