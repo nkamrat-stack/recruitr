@@ -16,6 +16,10 @@ export default function JobsList() {
   const [error, setError] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [editingJob, setEditingJob] = useState(null)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [linkedinText, setLinkedinText] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [generating, setGenerating] = useState(false)
 
   const [formData, setFormData] = useState({
     title: '',
@@ -146,6 +150,93 @@ export default function JobsList() {
     setShowModal(true)
   }
 
+  const handleImportFromLinkedIn = async () => {
+    if (!linkedinText.trim()) {
+      alert('Please paste a job description first')
+      return
+    }
+
+    setImporting(true)
+    try {
+      const response = await fetch(`${BACKEND_URL}/jobs/parse-description`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description_text: linkedinText }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Failed to parse description')
+      }
+
+      const parsed = await response.json()
+      
+      setFormData({
+        title: parsed.title || '',
+        description: parsed.description || '',
+        required_skills: parsed.required_skills || '',
+        nice_to_have_skills: parsed.nice_to_have_skills || '',
+        culture_requirements: parsed.culture_requirements || '',
+        salary_min: parsed.salary_min || '',
+        salary_max: parsed.salary_max || '',
+        hours_required: parsed.hours_required || 40,
+        location: parsed.location || '',
+        visa_sponsorship_available: false,
+        start_date_needed: '',
+        status: 'open',
+      })
+
+      setShowImportModal(false)
+      setLinkedinText('')
+      setEditingJob(null)
+      setShowModal(true)
+      
+    } catch (err) {
+      alert(`Error parsing description: ${err.message}`)
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleGenerateDescription = async () => {
+    if (!formData.title) {
+      alert('Please enter a job title first')
+      return
+    }
+
+    setGenerating(true)
+    try {
+      const response = await fetch(`${BACKEND_URL}/jobs/generate-description`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formData.title,
+          required_skills: formData.required_skills || null,
+          nice_to_have_skills: formData.nice_to_have_skills || null,
+          culture_requirements: formData.culture_requirements || null,
+          salary_min: formData.salary_min ? parseInt(formData.salary_min) : null,
+          salary_max: formData.salary_max ? parseInt(formData.salary_max) : null,
+          hours_required: formData.hours_required ? parseInt(formData.hours_required) : null,
+          location: formData.location || null,
+          visa_sponsorship_available: formData.visa_sponsorship_available || false,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Failed to generate description')
+      }
+
+      const result = await response.json()
+      setFormData({ ...formData, description: result.description })
+      
+    } catch (err) {
+      alert(`Error generating description: ${err.message}`)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   const getSkillsArray = (skillsString) => {
     if (!skillsString) return []
     return skillsString.split(',').map(s => s.trim()).filter(s => s)
@@ -194,12 +285,20 @@ export default function JobsList() {
           <h1 className="text-4xl font-bold text-gray-900">Jobs</h1>
           <p className="text-gray-600 mt-2">{jobs.length} total jobs</p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-md font-semibold hover:from-purple-700 hover:to-blue-700 transition shadow-lg"
-        >
-          + Create New Job
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="bg-white border-2 border-blue-600 text-blue-600 px-6 py-3 rounded-md font-semibold hover:bg-blue-50 transition shadow-md"
+          >
+            📋 Import from LinkedIn
+          </button>
+          <button
+            onClick={openCreateModal}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-md font-semibold hover:from-purple-700 hover:to-blue-700 transition shadow-lg"
+          >
+            + Create New Job
+          </button>
+        </div>
       </div>
 
       {jobs.length === 0 ? (
@@ -333,9 +432,19 @@ export default function JobsList() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description *
-                </label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Description *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateDescription}
+                    disabled={generating || !formData.title}
+                    className="text-sm bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-1.5 rounded-md hover:from-purple-700 hover:to-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generating ? '✨ Generating...' : '🤖 Generate Description'}
+                  </button>
+                </div>
                 <textarea
                   required
                   rows={4}
@@ -501,6 +610,58 @@ export default function JobsList() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import from LinkedIn Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">
+                📋 Import from LinkedIn
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Paste a job description from LinkedIn or any other source, and we'll extract the fields using AI.
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Job Description
+                </label>
+                <textarea
+                  rows={12}
+                  value={linkedinText}
+                  onChange={(e) => setLinkedinText(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                  placeholder="Paste the complete job description here...&#10;&#10;Example:&#10;Senior Software Engineer&#10;&#10;We are seeking a talented Senior Software Engineer...&#10;&#10;Requirements:&#10;- 5+ years of experience with Python&#10;- Strong knowledge of React and TypeScript&#10;..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImportModal(false)
+                    setLinkedinText('')
+                  }}
+                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  disabled={importing}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleImportFromLinkedIn}
+                  disabled={importing || !linkedinText.trim()}
+                  className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {importing ? '✨ Parsing with AI...' : '🤖 Parse with AI'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
