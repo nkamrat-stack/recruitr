@@ -14,6 +14,9 @@ export default function App({ Component, pageProps }) {
               <Link href="/candidates" className="flex items-center px-3 py-2 hover:bg-blue-700 rounded-md transition">
                 Candidates
               </Link>
+              <Link href="/settings/company" className="flex items-center px-3 py-2 hover:bg-blue-700 rounded-md transition">
+                Company
+              </Link>
               <Link href="/jobs" className="flex items-center px-3 py-2 hover:bg-blue-700 rounded-md transition">
                 Jobs
               </Link>
