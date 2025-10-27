@@ -326,10 +326,239 @@ export default function CandidateDetail() {
         </div>
       </div>
 
-      {/* Compliance Checklist Section */}
+      {/* Add Material Section */}
+      <div className="bg-white rounded-lg shadow-lg p-8 mb-8 border-2 border-blue-100">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">📤 Add Material</h2>
+        
+        {/* Upload Method Tabs */}
+        <div className="flex gap-4 mb-6 border-b border-gray-200">
+          <button
+            onClick={() => handleTabChange('file')}
+            className={`px-6 py-3 font-semibold transition ${
+              uploadMethod === 'file'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Upload File
+          </button>
+          <button
+            onClick={() => handleTabChange('url')}
+            className={`px-6 py-3 font-semibold transition ${
+              uploadMethod === 'url'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Paste URL
+          </button>
+          <button
+            onClick={() => handleTabChange('text')}
+            className={`px-6 py-3 font-semibold transition ${
+              uploadMethod === 'text'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Paste Text
+          </button>
+        </div>
+
+        <form onSubmit={handleUploadArtifact} className="space-y-6">
+          {/* Upload Input */}
+          {uploadMethod === 'file' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Choose File
+              </label>
+              <input
+                type="file"
+                onChange={(e) => setUploadFile(e.target.files[0])}
+                className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 focus:border-blue-500 transition"
+              />
+            </div>
+          )}
+
+          {uploadMethod === 'url' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Paste URL
+              </label>
+              <input
+                type="url"
+                value={uploadUrl}
+                onChange={(e) => setUploadUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+
+          {uploadMethod === 'text' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Paste Text
+              </label>
+              <textarea
+                value={uploadText}
+                onChange={(e) => setUploadText(e.target.value)}
+                rows={6}
+                placeholder="Paste content here..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Material Type
+              </label>
+              <select
+                value={artifactType}
+                onChange={(e) => setArtifactType(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                {getArtifactTypes().map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Title (Optional)
+              </label>
+              <input
+                type="text"
+                value={artifactTitle}
+                onChange={(e) => setArtifactTitle(e.target.value)}
+                placeholder="What is this?"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={uploading}
+            className="w-full bg-blue-600 text-white px-6 py-4 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition"
+          >
+            {uploading ? 'Adding Material...' : 'Add Material'}
+          </button>
+
+          {uploadSuccess && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 font-medium">
+              ✓ Material added successfully!
+            </div>
+          )}
+        </form>
+      </div>
+
+      {/* Materials List Section */}
+      <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">📁 Materials ({artifacts.length})</h2>
+        
+        {artifacts.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <p className="text-lg">No materials yet. Add some above!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {artifacts.map((artifact) => {
+              const skills = artifact.ai_extracted_skills ? JSON.parse(artifact.ai_extracted_skills) : []
+              const icon = ARTIFACT_ICONS[artifact.artifact_type] || '📎'
+              const isExpanded = expandedArtifacts[artifact.id]
+
+              return (
+                <div key={artifact.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition">
+                  <div className="flex items-start gap-4">
+                    <div className="text-4xl">{icon}</div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {artifact.title || artifact.artifact_type.replace(/_/g, ' ')}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            Uploaded {new Date(artifact.uploaded_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {artifact.ai_quality_score && (
+                            <div className="text-right">
+                              <p className="text-sm text-gray-500">Quality Score</p>
+                              <div className="flex items-center gap-2">
+                                <div className="w-24 bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="bg-blue-600 h-2 rounded-full"
+                                    style={{ width: `${artifact.ai_quality_score * 100}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-sm font-semibold text-gray-700">
+                                  {Math.round(artifact.ai_quality_score * 100)}%
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          {artifact.raw_url && (
+                            <a
+                              href={artifact.raw_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                            >
+                              View →
+                            </a>
+                          )}
+                          <button
+                            onClick={() => toggleArtifactExpansion(artifact.id)}
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            {isExpanded ? '▲' : '▼'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* AI Summary */}
+                      {artifact.ai_summary && (
+                        <div className="mt-3 bg-blue-50 rounded-lg p-4">
+                          <p className="text-sm font-semibold text-blue-900 mb-1">AI Summary:</p>
+                          <p className="text-sm text-gray-700">{artifact.ai_summary}</p>
+                        </div>
+                      )}
+
+                      {/* AI Skills */}
+                      {skills.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-sm font-semibold text-gray-700 mb-2">Extracted Skills:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {skills.map((skill, idx) => (
+                              <span
+                                key={idx}
+                                className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
+                              >
+                                {skill.name} ({Math.round(skill.confidence * 100)}%)
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Required Materials Checklist Section */}
       <div className="bg-white rounded-lg shadow-md p-8 mb-8">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Required Materials</h2>
+          <h2 className="text-2xl font-bold text-gray-900">✅ Required Materials</h2>
           <span className={`px-4 py-2 rounded-full font-semibold ${
             (() => {
               const hasResume = artifacts.some(a => a.artifact_type?.toLowerCase().includes('resume'))
@@ -463,6 +692,18 @@ export default function CandidateDetail() {
             <p className="text-gray-600 mb-2">
               Materials available: <span className="font-bold text-purple-600">{artifacts.length}</span>
             </p>
+            
+            {/* Helper text based on materials count */}
+            {artifacts.length > 0 ? (
+              <p className="text-blue-600 mb-6 text-lg font-semibold">
+                ✨ Ready to analyze {artifacts.length} {artifacts.length === 1 ? 'material' : 'materials'}
+              </p>
+            ) : (
+              <p className="text-orange-600 mb-6 text-lg font-semibold">
+                ⬆️ Upload materials above before analyzing
+              </p>
+            )}
+            
             <p className="text-gray-500 mb-6 max-w-2xl mx-auto">
               Generate a comprehensive AI analysis based on all uploaded materials. 
               The AI will analyze skills, experience, communication style, and provide personalized insights.
@@ -472,13 +713,8 @@ export default function CandidateDetail() {
               disabled={generatingProfile || artifacts.length === 0}
               className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 transition shadow-lg"
             >
-              {generatingProfile ? 'Generating Profile...' : 'Generate AI Profile from All Materials'}
+              {generatingProfile ? 'Analyzing...' : 'Analyze All Materials with AI'}
             </button>
-            {artifacts.length === 0 && (
-              <p className="text-orange-600 mt-4 text-sm font-medium">
-                ⚠️ Upload at least one material below to generate a profile
-              </p>
-            )}
           </div>
         ) : (
           <div className="bg-white rounded-b-lg shadow-lg p-8 space-y-6 border-x-2 border-b-2 border-purple-200">
@@ -666,350 +902,19 @@ export default function CandidateDetail() {
               </div>
             )}
 
-            {/* Regenerate Profile Button */}
+            {/* Update AI Analysis Button */}
             <div className="text-center pt-4 border-t-2 border-purple-100">
               <button
                 onClick={handleGenerateProfile}
                 disabled={generatingProfile}
                 className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 transition shadow-lg"
               >
-                {generatingProfile ? 'Regenerating Profile...' : '🔄 Regenerate Profile'}
+                {generatingProfile ? 'Updating Analysis...' : '🔄 Update AI Analysis'}
               </button>
             </div>
           </div>
         )}
       </div>
-
-      {/* Materials List Section */}
-      <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Materials ({artifacts.length})</h2>
-        
-        {artifacts.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-lg">No materials yet. Add some below!</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {artifacts.map((artifact) => {
-              const skills = artifact.ai_extracted_skills ? JSON.parse(artifact.ai_extracted_skills) : []
-              const icon = ARTIFACT_ICONS[artifact.artifact_type] || '📎'
-              const isExpanded = expandedArtifacts[artifact.id]
-
-              return (
-                <div key={artifact.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition">
-                  <div className="flex items-start gap-4">
-                    <div className="text-4xl">{icon}</div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {artifact.title || artifact.artifact_type.replace(/_/g, ' ')}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            Uploaded {new Date(artifact.uploaded_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {artifact.ai_quality_score && (
-                            <div className="text-right">
-                              <p className="text-sm text-gray-500">Quality Score</p>
-                              <div className="flex items-center gap-2">
-                                <div className="w-24 bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="bg-blue-600 h-2 rounded-full"
-                                    style={{ width: `${artifact.ai_quality_score * 100}%` }}
-                                  ></div>
-                                </div>
-                                <span className="text-sm font-semibold text-gray-700">
-                                  {Math.round(artifact.ai_quality_score * 100)}%
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                          {artifact.raw_url && (
-                            <a
-                              href={artifact.raw_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-                            >
-                              View →
-                            </a>
-                          )}
-                          <button
-                            onClick={() => toggleArtifactExpansion(artifact.id)}
-                            className="text-gray-500 hover:text-gray-700"
-                          >
-                            {isExpanded ? '▲' : '▼'}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* AI Summary */}
-                      {artifact.ai_summary && (
-                        <div className="mt-3 bg-blue-50 rounded-lg p-4">
-                          <p className="text-sm font-semibold text-blue-900 mb-1">AI Summary:</p>
-                          <p className="text-sm text-gray-700">{artifact.ai_summary}</p>
-                        </div>
-                      )}
-
-                      {/* AI Skills */}
-                      {skills.length > 0 && (
-                        <div className="mt-3">
-                          <p className="text-sm font-semibold text-gray-700 mb-2">Extracted Skills:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {skills.map((skill, idx) => (
-                              <span
-                                key={idx}
-                                className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
-                              >
-                                {skill.name} ({Math.round(skill.confidence * 100)}%)
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Add Material Section */}
-      <div className="bg-white rounded-lg shadow-lg p-8 mb-8 border-2 border-blue-100">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Add Material</h2>
-        
-        {/* Upload Method Tabs */}
-        <div className="flex gap-4 mb-6 border-b border-gray-200">
-          <button
-            onClick={() => handleTabChange('file')}
-            className={`px-6 py-3 font-semibold transition ${
-              uploadMethod === 'file'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Upload File
-          </button>
-          <button
-            onClick={() => handleTabChange('url')}
-            className={`px-6 py-3 font-semibold transition ${
-              uploadMethod === 'url'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Paste URL
-          </button>
-          <button
-            onClick={() => handleTabChange('text')}
-            className={`px-6 py-3 font-semibold transition ${
-              uploadMethod === 'text'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Paste Text
-          </button>
-        </div>
-
-        <form onSubmit={handleUploadArtifact} className="space-y-6">
-          {/* Upload Input */}
-          {uploadMethod === 'file' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Choose File
-              </label>
-              <input
-                type="file"
-                onChange={(e) => setUploadFile(e.target.files[0])}
-                className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-          )}
-
-          {uploadMethod === 'url' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Paste URL
-              </label>
-              <input
-                type="url"
-                value={uploadUrl}
-                onChange={(e) => setUploadUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          )}
-
-          {uploadMethod === 'text' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Paste Text
-              </label>
-              <textarea
-                value={uploadText}
-                onChange={(e) => setUploadText(e.target.value)}
-                rows={6}
-                placeholder="Paste content here..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Material Type
-              </label>
-              <select
-                value={artifactType}
-                onChange={(e) => setArtifactType(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                {getArtifactTypes().map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Title (Optional)
-              </label>
-              <input
-                type="text"
-                value={artifactTitle}
-                onChange={(e) => setArtifactTitle(e.target.value)}
-                placeholder="What is this?"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={uploading}
-            className="w-full bg-blue-600 text-white px-6 py-4 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition"
-          >
-            {uploading ? 'Adding Material...' : 'Add Material'}
-          </button>
-
-          {uploadSuccess && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 font-medium">
-              ✓ Material added successfully!
-            </div>
-          )}
-        </form>
-      </div>
-
-      {/* Materials List Section */}
-      <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Materials ({artifacts.length})</h2>
-        
-        {artifacts.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-lg">No materials yet. Add some above!</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {artifacts.map((artifact) => {
-              const skills = artifact.ai_extracted_skills ? JSON.parse(artifact.ai_extracted_skills) : []
-              const icon = ARTIFACT_ICONS[artifact.artifact_type] || '📎'
-              const isExpanded = expandedArtifacts[artifact.id]
-
-              return (
-                <div key={artifact.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition">
-                  <div className="flex items-start gap-4">
-                    <div className="text-4xl">{icon}</div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {artifact.title || artifact.artifact_type.replace(/_/g, ' ')}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            Uploaded {new Date(artifact.uploaded_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {artifact.ai_quality_score && (
-                            <div className="text-right">
-                              <p className="text-sm text-gray-500">Quality Score</p>
-                              <div className="flex items-center gap-2">
-                                <div className="w-24 bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="bg-blue-600 h-2 rounded-full"
-                                    style={{ width: `${artifact.ai_quality_score * 100}%` }}
-                                  ></div>
-                                </div>
-                                <span className="text-sm font-semibold text-gray-700">
-                                  {Math.round(artifact.ai_quality_score * 100)}%
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                          {artifact.raw_url && (
-                            <a
-                              href={artifact.raw_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition text-sm"
-                            >
-                              Visit
-                            </a>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* AI Summary */}
-                      {artifact.ai_summary && (
-                        <div className="mt-3">
-                          <button
-                            onClick={() => toggleArtifactExpansion(artifact.id)}
-                            className="text-blue-600 hover:text-blue-700 font-medium text-sm mb-2"
-                          >
-                            {isExpanded ? '▼ Hide Summary' : '▶ Show AI Summary'}
-                          </button>
-                          {isExpanded && (
-                            <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
-                              {artifact.ai_summary}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* AI Skills */}
-                      {skills.length > 0 && (
-                        <div className="mt-3">
-                          <p className="text-sm font-semibold text-gray-700 mb-2">Extracted Skills:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {skills.map((skill, idx) => (
-                              <span
-                                key={idx}
-                                className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
-                              >
-                                {skill.name} ({Math.round(skill.confidence * 100)}%)
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
     </div>
   )
 }

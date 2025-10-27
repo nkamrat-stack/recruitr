@@ -4,22 +4,24 @@
 Recruitr is a full-stack AI-powered recruiting application with a FastAPI backend and Next.js frontend. It helps rank and match candidates based on their resumes against job descriptions using a multi-factor scoring algorithm.
 
 ## Recent Changes
-- **October 26, 2025**: Redesigned Candidate Detail Page - Separated Material Collection from AI Analysis
-  - **Page Structure Redesign**: Moved AI Profile section to prominent position ABOVE materials list
-  - **New Page Order**: Header → Key Info Cards → Compliance Checklist → 🤖 AI PROFILE (star section) → Materials List → Add Material (bottom)
-  - **AI Profile Section Features**:
-    * Purple-to-indigo gradient header with 🤖 emoji and subtitle
-    * When NO profile: Shows materials count, "Generate AI Profile from All Materials" button, warning if no materials
-    * When profile EXISTS: Complete multi-section profile with Overall Summary, Technical Skills, Quality Scores, Strengths, Concerns, Culture Signals, Personality, Communication Style
-    * Regenerate Profile button at bottom with border separator
-  - **Material Collection Workflow** (separated from AI):
-    * "Add Material" section moved to bottom of page (no AI mentions)
-    * Button text changed from "Upload & Analyze with AI" to just "Add Material"
-    * Success message: "Material added successfully!" (removed AI reference)
+- **October 27, 2025**: Candidate Detail Page - Logical Workflow Redesign
+  - **New Workflow Order**: Header → Key Info Cards → 📤 ADD MATERIALS → 📁 MATERIALS LIST → ✅ REQUIRED MATERIALS CHECKLIST → 🤖 AI PROFILE ANALYSIS (bottom)
+  - **Workflow Philosophy**: Add materials → See what you collected → Check compliance → Analyze with AI
+  - **Add Material Section** (moved to top after key info cards):
+    * 📤 icon in heading for visual clarity
     * Three tabs: Upload File, Paste URL, Paste Text
-    * Context-aware material type dropdown based on upload method
-  - **Materials List Section**: Simple list between AI Profile and Add Material sections
-  - **Clear Workflow Separation**: Material collection is distinct from AI analysis - AI Profile is the showcase
+    * Button: "Add Material" (simple, no AI mentions)
+    * Success message: "Material added successfully!"
+  - **Materials List Section**: 📁 Shows all uploaded materials with quality scores, AI summaries, extracted skills
+  - **Required Materials Checklist**: ✅ Tracks 4 required items (Resume, Loom Video, Google Doc, Email) with completion badges
+  - **AI Profile Analysis Section** (moved to bottom):
+    * Purple-to-indigo gradient header with 🤖 emoji
+    * Button text updated: "Analyze All Materials with AI" (was "Generate AI Profile from All Materials")
+    * Update button: "Update AI Analysis" (was "Regenerate Profile")
+    * Helper text when no profile + materials > 0: "✨ Ready to analyze X materials"
+    * Helper text when no profile + materials = 0: "⬆️ Upload materials above before analyzing"
+    * Complete profile display with all sections when profile exists
+  - **Improved UX**: Clear sequential workflow from data collection to AI insights
 
 - **October 26, 2025**: Added Profile Generation Endpoints
   - Created POST /candidates/{id}/generate-profile endpoint

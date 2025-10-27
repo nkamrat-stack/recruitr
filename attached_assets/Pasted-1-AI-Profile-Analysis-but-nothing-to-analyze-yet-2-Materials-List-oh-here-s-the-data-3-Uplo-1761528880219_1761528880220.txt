@@ -1,0 +1,75 @@
+1. AI Profile Analysis (but nothing to analyze yet!)
+2. Materials List (oh, here's the data)
+3. Upload Section (add more data)
+```
+
+Natural workflow should be:
+```
+1. Upload/Add Materials (collect data FIRST)
+2. Materials List (see what you have)
+3. Compliance Checklist (see what's missing)
+4. AI Profile Analysis (NOW analyze everything above)
+```
+
+---
+
+## **Better Page Structure:**
+```
+┌─────────────────────────────────────┐
+│  John Smith                         │
+│  Email: john@...  Status: New       │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│  📤 Add Materials (STEP 1)          │
+│  [Upload File] [URL] [Text]         │
+│  ← Start here, collect everything   │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│  📁 Collected Materials (2)         │
+│  • Resume text                      │
+│  • Experience summary               │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│  ✅ Required Materials Checklist    │
+│  ✅ Resume  ⭕ Video  ⭕ Doc         │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│  🤖 AI Analysis (STEP 2)            │
+│  Ready to analyze 2 materials       │
+│  [Analyze with AI] ← Do this last   │
+└─────────────────────────────────────┘
+```
+
+**Flow:** Gather → See what you have → Analyze
+
+---
+
+**📋 YOUR ACTION:**
+
+Tell Replit Agent:
+```
+Redesign candidate detail page with logical workflow order:
+
+1. Change "Regenerate Profile" button text to "Update AI Analysis"
+
+2. Reorder sections to follow natural workflow:
+   - Header (name, email, status, edit button)
+   - Key Info Cards (salary, hours, visa, availability)
+   - 📤 ADD MATERIALS section (move to top, prominent)
+   - 📁 MATERIALS LIST (show collected items)
+   - ✅ COMPLIANCE CHECKLIST (what's missing)
+   - 🤖 AI PROFILE ANALYSIS (at bottom, analyze everything above)
+
+3. Update AI Profile button text:
+   - When no profile: "Analyze All Materials with AI"
+   - When profile exists: "Update AI Analysis"
+
+4. Add helper text in AI Profile section:
+   - "AI will analyze all 2 materials above"
+   - Or "Upload materials above before analyzing"
+
+Make it crystal clear: collect data first → analyze second.
