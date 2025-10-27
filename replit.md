@@ -21,7 +21,9 @@ Do not make changes to the file `Y`.
   - **Schema**: `candidates`, `candidate_artifacts`, `candidate_profiles`, `jobs`, `matches`, `feedback`.
 - **API Endpoints**:
   - **Candidates**: CRUD operations, artifact management, AI profile generation and retrieval.
-  - **Jobs**: CRUD operations, listing jobs with match counts.
+  - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools.
+    - `POST /jobs/parse-description`: Parse LinkedIn job descriptions and extract structured fields using AI.
+    - `POST /jobs/generate-description`: Generate professional job descriptions from job fields using AI.
   - **AI Analysis**: Endpoints for testing AI capabilities.
 - **Feature Extraction**: Regex-based skill detection (e.g., python, react, docker) and culture signal identification (e.g., shipped, launched).
 - **Scoring Algorithm**: Weighted model combining Skills (45%), Culture (20%), Potential (20%), Domain (10%), and Logistics (5%) scores.
@@ -31,11 +33,15 @@ Do not make changes to the file `Y`.
   - **Home (`/`)**: Entry point.
   - **Candidates List (`/candidates`)**: Displays all candidates with AI status, scores, and bulk actions.
   - **Candidate Detail (`/candidates/[id]`)**: Comprehensive view with materials management, compliance checklist, and AI analysis.
-  - **Jobs List (`/jobs`)**: Manages job postings, including creation, editing, and deletion.
+  - **Jobs List (`/jobs`)**: Manages job postings with AI-powered creation tools:
+    - **Import from LinkedIn**: Paste job descriptions from LinkedIn or any source, AI extracts all fields automatically.
+    - **Generate Description**: AI generates professional LinkedIn-style descriptions from job fields.
+    - Standard CRUD operations: create, edit, delete job postings.
 - **Features**:
   - Real-time form validation, professional TailwindCSS styling, and responsive design.
   - Dynamic display of AI analysis status and scores.
   - Workflow-driven UI for material submission and AI profile generation.
+  - AI-powered job creation tools: Import from LinkedIn, Generate Description with AI.
 
 #### System Design Choices
 - **Dual-server setup**: FastAPI backend (port 8000) and Next.js frontend (port 5000) run simultaneously, communicating via HTTPS to avoid mixed content errors.
