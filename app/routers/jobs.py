@@ -400,6 +400,32 @@ class MatchResponse(BaseModel):
         from_attributes = True
 
 
+@router.get("/{job_id}/matches", response_model=List[MatchResponse])
+def get_job_matches(job_id: int, db: Session = Depends(get_db)):
+    """
+    Retrieve existing matches for a job.
+    Returns ranked list sorted by overall_score (highest first).
+    """
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    matches = db.query(Match).filter(Match.job_id == job_id).all()
+    
+    result = []
+    for match in matches:
+        candidate = db.query(Candidate).filter(Candidate.id == match.candidate_id).first()
+        if candidate:
+            match_dict = match.__dict__.copy()
+            match_dict['candidate_name'] = candidate.name
+            result.append(match_dict)
+    
+    result.sort(key=lambda x: x.get('overall_score', 0.0), reverse=True)
+    
+    logger.info(f"Retrieved {len(result)} existing matches for job {job_id}")
+    return result
+
+
 @router.post("/{job_id}/match", response_model=List[MatchResponse])
 def match_candidates_to_job(job_id: int, db: Session = Depends(get_db)):
     """

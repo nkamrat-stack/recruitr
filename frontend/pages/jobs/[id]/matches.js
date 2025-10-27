@@ -39,7 +39,23 @@ export default function JobMatches() {
       const jobData = await jobResponse.json()
       setJob(jobData)
       
+      const matchResponse = await fetch(`${BACKEND_URL}/jobs/${id}/matches`)
+      if (!matchResponse.ok) throw new Error('Failed to fetch matches')
+      const matchData = await matchResponse.json()
+      setMatches(matchData)
+      
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const regenerateMatches = async () => {
+    try {
       setMatching(true)
+      setError(null)
+      
       const matchResponse = await fetch(`${BACKEND_URL}/jobs/${id}/match`, {
         method: 'POST',
       })
@@ -50,7 +66,6 @@ export default function JobMatches() {
     } catch (err) {
       setError(err.message)
     } finally {
-      setLoading(false)
       setMatching(false)
     }
   }
@@ -137,7 +152,7 @@ export default function JobMatches() {
             )}
           </div>
           <button
-            onClick={fetchJobAndMatches}
+            onClick={regenerateMatches}
             disabled={matching}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center"
           >
