@@ -18,7 +18,7 @@ Do not make changes to the file `Y`.
 #### Technical Implementations
 **Backend (FastAPI)**
 - **Database**: SQLite, managed with SQLAlchemy ORM.
-  - **Schema**: `candidates`, `candidate_artifacts`, `candidate_profiles`, `jobs`, `matches`, `feedback`.
+  - **Schema**: `candidates`, `candidate_artifacts`, `candidate_profiles`, `jobs`, `matches`, `feedback`, `company_profile`.
 - **API Endpoints**:
   - **Candidates**: CRUD operations, artifact management, AI profile generation and retrieval.
   - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools, candidate matching.
@@ -26,6 +26,9 @@ Do not make changes to the file `Y`.
     - `POST /jobs/generate-description`: Generate professional job descriptions from job fields using AI.
     - `GET /jobs/{job_id}/matches`: Retrieve existing candidate matches for a job.
     - `POST /jobs/{job_id}/match`: Match all candidates with AI profiles to a job, scoring and ranking them.
+  - **Company Profile**: Manage company information and culture.
+    - `GET /company/profile`: Retrieve company profile (404 if none exists).
+    - `POST /company/profile`: Create or update company profile (upserts single profile).
   - **AI Analysis**: Endpoints for testing AI capabilities.
 - **Feature Extraction**: Regex-based skill detection (e.g., python, react, docker) and culture signal identification (e.g., shipped, launched).
 - **Scoring Algorithm**: Weighted model combining Skills (45%), Culture (20%), Potential (20%), Domain (10%), and Logistics (5%) scores.
@@ -47,6 +50,11 @@ Do not make changes to the file `Y`.
     - Expandable AI reasoning sections.
     - Filtering: compatible-only toggle, score threshold slider (0-100).
     - Links to candidate profiles for detailed review.
+  - **Company Profile (`/settings/company`)**: Manage company information and culture:
+    - Two input modes: Manual Entry (default) and Generate from Website (placeholder for future AI feature).
+    - Form fields: Company Name (required), About, Mission, Vision, Core Values, Culture Description, Website URL.
+    - Single profile design: creates on first save, updates on subsequent saves.
+    - Professional TailwindCSS styling with validation and error handling.
 - **Features**:
   - Real-time form validation, professional TailwindCSS styling, and responsive design.
   - Dynamic display of AI analysis status and scores.
