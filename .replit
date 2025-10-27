@@ -55,12 +55,12 @@ localPort = 8000
 externalPort = 8000
 
 [[ports]]
-localPort = 33271
-externalPort = 3001
-
-[[ports]]
 localPort = 41867
 externalPort = 3000
+
+[[ports]]
+localPort = 46613
+externalPort = 3001
 
 [deployment]
 deploymentTarget = "cloudrun"

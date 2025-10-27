@@ -21,12 +21,14 @@ Do not make changes to the file `Y`.
   - **Schema**: `candidates`, `candidate_artifacts`, `candidate_profiles`, `jobs`, `matches`, `feedback`.
 - **API Endpoints**:
   - **Candidates**: CRUD operations, artifact management, AI profile generation and retrieval.
-  - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools.
+  - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools, candidate matching.
     - `POST /jobs/parse-description`: Parse LinkedIn job descriptions and extract structured fields using AI.
     - `POST /jobs/generate-description`: Generate professional job descriptions from job fields using AI.
+    - `POST /jobs/{job_id}/match`: Match all candidates with AI profiles to a job, scoring and ranking them.
   - **AI Analysis**: Endpoints for testing AI capabilities.
 - **Feature Extraction**: Regex-based skill detection (e.g., python, react, docker) and culture signal identification (e.g., shipped, launched).
 - **Scoring Algorithm**: Weighted model combining Skills (45%), Culture (20%), Potential (20%), Domain (10%), and Logistics (5%) scores.
+- **Candidate Matching**: AI-powered endpoint that scores all candidates against a job, calculates compatibility constraints (salary, hours, location, visa, availability), and stores ranked matches in the database.
 
 **Frontend (Next.js 14)**
 - **Pages**:

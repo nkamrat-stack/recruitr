@@ -7,8 +7,8 @@ from datetime import datetime, date
 import json
 import logging
 
-from database import get_db, Job, Match
-from app.services.ai_service import get_openai_client
+from database import get_db, Job, Match, Candidate, CandidateProfile, CandidateArtifact
+from app.services.ai_service import get_openai_client, score_candidate_for_job
 
 logger = logging.getLogger(__name__)
 
@@ -374,3 +374,187 @@ Return a JSON object with this structure:
             status_code=500,
             detail=f"Failed to generate job description: {str(e)}"
         )
+
+
+class MatchResponse(BaseModel):
+    id: int
+    candidate_id: int
+    candidate_name: str
+    job_id: int
+    overall_score: float
+    skills_score: float
+    culture_score: float
+    communication_score: float
+    quality_score: float
+    potential_score: float
+    salary_compatible: bool
+    hours_compatible: bool
+    location_compatible: bool
+    visa_compatible: bool
+    availability_compatible: bool
+    evidence: Optional[str]
+    ai_reasoning: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.post("/{job_id}/match", response_model=List[MatchResponse])
+def match_candidates_to_job(job_id: int, db: Session = Depends(get_db)):
+    """
+    Match all candidates with AI profiles to a specific job.
+    Scores each candidate and stores results in matches table.
+    Returns ranked list sorted by overall_score (highest first).
+    """
+    # Get the job
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Get all candidates who have AI profiles
+    candidates_with_profiles = db.query(Candidate).join(
+        CandidateProfile, Candidate.id == CandidateProfile.candidate_id
+    ).all()
+    
+    if not candidates_with_profiles:
+        logger.info(f"No candidates with AI profiles found for job {job_id}")
+        return []
+    
+    logger.info(f"Matching {len(candidates_with_profiles)} candidates to job {job_id}: {job.title}")
+    
+    matches = []
+    
+    for candidate in candidates_with_profiles:
+        try:
+            # Get candidate profile
+            profile = db.query(CandidateProfile).filter(
+                CandidateProfile.candidate_id == candidate.id
+            ).first()
+            
+            if not profile:
+                continue
+            
+            # Prepare profile data for AI scoring
+            profile_data = {
+                "technical_skills": profile.technical_skills,
+                "years_experience": profile.years_experience,
+                "writing_quality_score": profile.writing_quality_score,
+                "verbal_quality_score": profile.verbal_quality_score,
+                "communication_style": profile.communication_style,
+                "portfolio_quality_score": profile.portfolio_quality_score,
+                "code_quality_score": profile.code_quality_score,
+                "culture_signals": profile.culture_signals,
+                "personality_traits": profile.personality_traits,
+                "strengths": profile.strengths,
+                "concerns": profile.concerns,
+                "best_role_fit": profile.best_role_fit,
+                "growth_potential_score": profile.growth_potential_score,
+            }
+            
+            # Prepare job requirements for AI scoring
+            job_data = {
+                "title": job.title,
+                "description": job.description,
+                "required_skills": job.required_skills,
+                "nice_to_have_skills": job.nice_to_have_skills,
+                "culture_requirements": job.culture_requirements,
+                "location": job.location,
+            }
+            
+            # Call AI service to score candidate
+            ai_scores = score_candidate_for_job(profile_data, job_data)
+            
+            # Calculate compatibility constraints
+            salary_compatible = True
+            if job.salary_min is not None and candidate.salary_expectation_min is not None:
+                job_max = job.salary_max if job.salary_max is not None else float('inf')
+                salary_compatible = candidate.salary_expectation_min <= job_max
+            
+            hours_compatible = True
+            if job.hours_required is not None and candidate.hours_available is not None:
+                hours_compatible = candidate.hours_available >= job.hours_required
+            
+            location_compatible = True
+            if job.location is not None and candidate.location is not None:
+                job_loc = str(job.location).lower()
+                cand_loc = str(candidate.location).lower()
+                location_compatible = (
+                    'remote' in job_loc or 
+                    'remote' in cand_loc or
+                    job_loc in cand_loc or 
+                    cand_loc in job_loc
+                )
+            
+            visa_compatible = True
+            if job.visa_sponsorship_available is False and candidate.visa_status is not None:
+                visa_compatible = str(candidate.visa_status).lower() in ['citizen', 'permanent resident', 'green card']
+            
+            availability_compatible = True
+            if job.start_date_needed is not None and candidate.availability_start_date is not None:
+                availability_compatible = candidate.availability_start_date <= job.start_date_needed
+            
+            # Check if match already exists
+            existing_match = db.query(Match).filter(
+                Match.candidate_id == candidate.id,
+                Match.job_id == job_id
+            ).first()
+            
+            if existing_match:
+                # Update existing match
+                existing_match.overall_score = ai_scores.get("overall_score", 0.0)
+                existing_match.skills_score = ai_scores.get("skills_score", 0.0)
+                existing_match.culture_score = ai_scores.get("culture_score", 0.0)
+                existing_match.communication_score = ai_scores.get("communication_score", 0.0)
+                existing_match.quality_score = ai_scores.get("quality_score", 0.0)
+                existing_match.potential_score = ai_scores.get("potential_score", 0.0)
+                existing_match.salary_compatible = salary_compatible
+                existing_match.hours_compatible = hours_compatible
+                existing_match.location_compatible = location_compatible
+                existing_match.visa_compatible = visa_compatible
+                existing_match.availability_compatible = availability_compatible
+                existing_match.evidence = ai_scores.get("evidence", "{}")
+                existing_match.ai_reasoning = ai_scores.get("ai_reasoning", "")
+                match = existing_match
+            else:
+                # Create new match
+                match = Match(
+                    candidate_id=candidate.id,
+                    job_id=job_id,
+                    overall_score=ai_scores.get("overall_score", 0.0),
+                    skills_score=ai_scores.get("skills_score", 0.0),
+                    culture_score=ai_scores.get("culture_score", 0.0),
+                    communication_score=ai_scores.get("communication_score", 0.0),
+                    quality_score=ai_scores.get("quality_score", 0.0),
+                    potential_score=ai_scores.get("potential_score", 0.0),
+                    salary_compatible=salary_compatible,
+                    hours_compatible=hours_compatible,
+                    location_compatible=location_compatible,
+                    visa_compatible=visa_compatible,
+                    availability_compatible=availability_compatible,
+                    evidence=ai_scores.get("evidence", "{}"),
+                    ai_reasoning=ai_scores.get("ai_reasoning", "")
+                )
+                db.add(match)
+            
+            db.commit()
+            db.refresh(match)
+            
+            # Add candidate name to match for response
+            match_dict = match.__dict__.copy()
+            match_dict['candidate_name'] = candidate.name
+            matches.append(match_dict)
+            
+            logger.info(f"Matched candidate {candidate.name} with score {ai_scores.get('overall_score', 0.0)}")
+            
+        except Exception as e:
+            logger.error(f"Error matching candidate {candidate.id}: {str(e)}")
+            db.rollback()
+            continue
+    
+    # Sort by overall_score (highest first)
+    matches.sort(key=lambda x: x.get('overall_score', 0.0), reverse=True)
+    
+    logger.info(f"Successfully matched {len(matches)} candidates to job {job_id}")
+    
+    return matches
