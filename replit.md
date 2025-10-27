@@ -24,6 +24,7 @@ Do not make changes to the file `Y`.
   - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools, candidate matching.
     - `POST /jobs/parse-description`: Parse LinkedIn job descriptions and extract structured fields using AI.
     - `POST /jobs/generate-description`: Generate professional job descriptions from job fields using AI.
+    - `GET /jobs/{job_id}/matches`: Retrieve existing candidate matches for a job.
     - `POST /jobs/{job_id}/match`: Match all candidates with AI profiles to a job, scoring and ranking them.
   - **AI Analysis**: Endpoints for testing AI capabilities.
 - **Feature Extraction**: Regex-based skill detection (e.g., python, react, docker) and culture signal identification (e.g., shipped, launched).
@@ -39,6 +40,13 @@ Do not make changes to the file `Y`.
     - **Import from LinkedIn**: Paste job descriptions from LinkedIn or any source, AI extracts all fields automatically.
     - **Generate Description**: AI generates professional LinkedIn-style descriptions from job fields.
     - Standard CRUD operations: create, edit, delete job postings.
+  - **Job Matches (`/jobs/[id]/matches`)**: Displays ranked candidates for a specific job:
+    - Fetches existing matches (fast) or regenerates with AI (on-demand).
+    - Shows rank, overall score with progress bar, 5 dimension scores (Skills, Culture, Communication, Quality, Potential).
+    - Displays 5 compatibility badges (Salary, Hours, Location, Visa, Availability).
+    - Expandable AI reasoning sections.
+    - Filtering: compatible-only toggle, score threshold slider (0-100).
+    - Links to candidate profiles for detailed review.
 - **Features**:
   - Real-time form validation, professional TailwindCSS styling, and responsive design.
   - Dynamic display of AI analysis status and scores.
