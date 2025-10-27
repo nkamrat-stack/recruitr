@@ -1,259 +1,56 @@
 # Recruitr - Full Stack AI Recruiting Application
 
-## Overview
-Recruitr is a full-stack AI-powered recruiting application with a FastAPI backend and Next.js frontend. It helps rank and match candidates based on their resumes against job descriptions using a multi-factor scoring algorithm.
+### Overview
+Recruitr is a full-stack AI-powered recruiting application designed to streamline the hiring process. It leverages AI to rank and match candidates against job descriptions using a multi-factor scoring algorithm. The application aims to automate resume analysis, generate comprehensive candidate profiles, and provide recruiters with insightful data to make informed hiring decisions.
 
-## Recent Changes
-- **October 27, 2025**: Candidates List Page - AI Profile Management Features
-  - **New Table Columns**:
-    * Materials column: Shows count (e.g., "1 items", "0 items")
-    * AI Status column: ✅ Current (green) | ⚠️ Needs Update (yellow) | ❌ Not Analyzed (gray)
-    * Score column: Shows overall_score from profile (e.g., "92/100") with progress bar, or "--" if no profile
-  - **Quick Action Buttons** (in Actions column):
-    * "▶️ Generate" button if no profile exists
-    * "🔄 Update" button if profile is outdated (materials uploaded after last_ai_analysis)
-    * "View" button always visible to navigate to detail page
-  - **Bulk Actions**:
-    * "🤖 Generate All Profiles (N)" button at top when candidates without profiles exist
-    * Shows progress counter during bulk generation: "Generating 1/50..."
-    * Disabled during processing
-  - **Enhanced Filters**:
-    * AI Status filter: All, Not Analyzed, Current, Needs Update
-    * Score Range filter: All Scores, 90+, 80-89, 70-79, Below 70
-    * Combined with existing Status and Location filters
-  - **Sortable Score Column**: Click to toggle ascending/descending, defaults to highest first
-  - **Backend Enhancements**:
-    * Added latest_artifact_uploaded_at field to CandidateResponse for AI status calculation
-    * Optimized list_candidates endpoint with single aggregated query using func.count() and func.max()
-    * Eliminates N+1 query pattern for production-ready performance
-  - **Frontend Optimizations**:
-    * Bulk generation only refreshes candidate list once at end (not after each profile)
-    * Progress tracking and success/error summary for bulk operations
-    * O(n) network complexity for scalability
-  - **Smart AI Status Detection**: Compares latest artifact upload time with profile.last_ai_analysis to determine if update needed
+### User Preferences
+I prefer detailed explanations.
+Do not make changes to the folder `Z`.
+Do not make changes to the file `Y`.
 
-- **October 27, 2025**: Candidate Detail Page - Logical Workflow Redesign
-  - **New Workflow Order**: Header → Key Info Cards → 📤 ADD MATERIALS → 📁 MATERIALS LIST → ✅ REQUIRED MATERIALS CHECKLIST → 🤖 AI PROFILE ANALYSIS (bottom)
-  - **Workflow Philosophy**: Add materials → See what you collected → Check compliance → Analyze with AI
-  - **Add Material Section** (moved to top after key info cards):
-    * 📤 icon in heading for visual clarity
-    * Three tabs: Upload File, Paste URL, Paste Text
-    * Button: "Add Material" (simple, no AI mentions)
-    * Success message: "Material added successfully!"
-  - **Materials List Section**: 📁 Shows all uploaded materials with quality scores, AI summaries, extracted skills
-  - **Required Materials Checklist**: ✅ Tracks 4 required items (Resume, Loom Video, Google Doc, Email) with completion badges
-  - **AI Profile Analysis Section** (moved to bottom):
-    * Purple-to-indigo gradient header with 🤖 emoji
-    * Button text updated: "Analyze All Materials with AI" (was "Generate AI Profile from All Materials")
-    * Update button: "Update AI Analysis" (was "Regenerate Profile")
-    * Helper text when no profile + materials > 0: "✨ Ready to analyze X materials"
-    * Helper text when no profile + materials = 0: "⬆️ Upload materials above before analyzing"
-    * Complete profile display with all sections when profile exists
-  - **Improved UX**: Clear sequential workflow from data collection to AI insights
+### System Architecture
 
-- **October 26, 2025**: Added Profile Generation Endpoints
-  - Created POST /candidates/{id}/generate-profile endpoint
-  - Fetches all candidate artifacts and generates comprehensive AI profile
-  - Calls ai_service.generate_candidate_profile() with artifact summaries
-  - Stores profile in candidate_profiles table (creates or updates)
-  - Returns ProfileResponse with all profile fields
-  - Created GET /candidates/{id}/profile endpoint
-  - Returns existing profile or 404 if not generated
-  - Added ProfileResponse Pydantic model with all profile fields
-  - Proper error handling: 404 for missing candidate, 400 for no artifacts, 500 for AI failures
+#### UI/UX Decisions
+- **Color Schemes**: Utilizes professional, clean aesthetics with gradient cards and subtle shadows.
+- **Templates**: Consistent layout across pages with a focus on clear information presentation.
+- **Design Approaches**: Responsive design using TailwindCSS for optimal viewing on various devices. Uses status badges, score progress bars, and icon-based cues for intuitive interaction.
 
-- **October 26, 2025**: Candidate Detail Page - Added Compliance Checklist
-  - Created "Required Materials" section between Key Info Cards and Add Material section
-  - Tracks 4 required materials: Resume, Loom Video, Google Doc Response, Email Response
-  - Shows completion count (e.g., "1/4 Complete" or "4/4 Complete")
-  - Green checkmark ✅ for submitted items with green background
-  - Gray circle ⭕ for missing items with gray background
-  - Yellow badge when incomplete, green badge when all 4 complete
-  - Dynamically calculates from candidate's artifacts array
-  - Professional TailwindCSS styling with subtle shadows
+#### Technical Implementations
+**Backend (FastAPI)**
+- **Database**: SQLite, managed with SQLAlchemy ORM.
+  - **Schema**: `candidates`, `candidate_artifacts`, `candidate_profiles`, `jobs`, `matches`, `feedback`.
+- **API Endpoints**:
+  - **Candidates**: CRUD operations, artifact management, AI profile generation and retrieval.
+  - **Jobs**: CRUD operations, listing jobs with match counts.
+  - **AI Analysis**: Endpoints for testing AI capabilities.
+- **Feature Extraction**: Regex-based skill detection (e.g., python, react, docker) and culture signal identification (e.g., shipped, launched).
+- **Scoring Algorithm**: Weighted model combining Skills (45%), Culture (20%), Potential (20%), Domain (10%), and Logistics (5%) scores.
 
-- **October 26, 2025**: Candidates List Page Enhanced with Metrics & Filters
-  - Added 4 colorful metrics cards: Total Candidates, New Candidates, In Review, With Materials
-  - Implemented filters bar with search (by name/email), status dropdown, and location dropdown
-  - Added "Clear Filters" functionality with result count display
-  - Updated backend to return artifact_count for each candidate
-  - Used gradient cards with professional TailwindCSS styling
-  - Filtering happens client-side for instant results
+**Frontend (Next.js 14)**
+- **Pages**:
+  - **Home (`/`)**: Entry point.
+  - **Candidates List (`/candidates`)**: Displays all candidates with AI status, scores, and bulk actions.
+  - **Candidate Detail (`/candidates/[id]`)**: Comprehensive view with materials management, compliance checklist, and AI analysis.
+  - **Jobs List (`/jobs`)**: Manages job postings, including creation, editing, and deletion.
+- **Features**:
+  - Real-time form validation, professional TailwindCSS styling, and responsive design.
+  - Dynamic display of AI analysis status and scores.
+  - Workflow-driven UI for material submission and AI profile generation.
 
-- **October 26, 2025**: AI Service Module Created
-  - Created `app/services/ai_service.py` with GPT-4o-mini integration
-  - Implemented 4 AI functions: get_openai_client, analyze_artifact, generate_candidate_profile, score_candidate_for_job
-  - Upgraded OpenAI library from 1.12.0 to 2.6.1
-  - All functions use JSON mode for structured outputs with temperature 0.3
-  - Comprehensive error handling and logging throughout
-  - Ready for AI-powered resume analysis and candidate matching
+#### System Design Choices
+- **Dual-server setup**: FastAPI backend (port 8000) and Next.js frontend (port 5000) run simultaneously, communicating via HTTPS to avoid mixed content errors.
+- **AI Integration**: Deep integration of OpenAI's GPT-4o-mini for artifact analysis, profile generation, and job matching, utilizing JSON mode for structured outputs.
+- **Scalability**: Optimized backend queries (e.g., aggregated match counts, `latest_artifact_uploaded_at`) to prevent N+1 issues and improve performance. Frontend bulk operations are designed for efficiency.
+- **Modularity**: Separation of concerns with dedicated routers for candidates and jobs, and a distinct AI service module.
 
-- **October 26, 2025**: Database Schema Overhaul
-  - Enhanced candidates table with 13 new fields (contact info, salary expectations, location, visa status, etc.)
-  - Created candidate_artifacts table for storing resumes, videos, code samples (with artifact_metadata field)
-  - Created candidate_profiles table with AI analysis fields (technical skills, quality scores, culture signals, etc.)
-  - Created jobs table for job postings with requirements
-  - Created matches table for AI-powered candidate-job scoring
-  - Enhanced feedback table with outcomes and recruiter ratings
-  - All 7 tables successfully created and verified in SQLite database
+### External Dependencies
 
-- **October 26, 2025**: Reconfigured dual-server setup
-  - Separated Backend workflow (port 8000) and Frontend workflow (port 5000)
-  - Backend runs on port 8000 with automatic HTTPS support via Replit
-  - Frontend runs on port 5000 and connects to backend via HTTPS public URL
-  - Fixed SQLAlchemy type casting issues in main.py
-  - Fixed mixed content security error by using HTTPS for backend API calls
-  - Both workflows run simultaneously for integrated development
-  
-- **October 26, 2025**: Initial project creation
-  - Created FastAPI backend with SQLite database
-  - Implemented candidate upload and resume parsing
-  - Built candidate ranking system with weighted scoring algorithm
-  - Added skills extraction and culture signal detection using regex
-  - Created Next.js 14 frontend with TailwindCSS
-  - Built three main pages: Home, Upload Candidates, Rank Candidates
-  - Connected frontend to backend API
-
-## Project Architecture
-
-### Backend (FastAPI)
-
-#### Database Schema (SQLite)
-- **candidates**: Stores candidate information (id, name, email)
-- **artifacts**: Stores candidate resumes and documents (id, candidate_id, kind, source, text)
-- **feedback**: Stores hiring feedback for candidates (id, candidate_id, job_title, label)
-
-#### API Endpoints
-
-**Core Endpoints:**
-1. `GET /` - Root endpoint returns API status
-2. `GET /health/openai` - Check OpenAI API key configuration
-3. `POST /test/analyze-text` - Test AI analysis with sample text
-
-**Candidates Router (`/candidates`):**
-1. `POST /candidates/` - Create new candidate with detailed info
-2. `GET /candidates/` - List all candidates (filter by status, location)
-3. `GET /candidates/{id}` - Get candidate with artifacts and profile
-4. `PUT /candidates/{id}` - Update candidate information
-5. `DELETE /candidates/{id}` - Soft delete candidate (status='deleted')
-6. `POST /candidates/{id}/artifacts` - Upload artifact with AI analysis
-7. `GET /candidates/{id}/artifacts` - List all artifacts for a candidate
-8. `POST /candidates/{id}/generate-profile` - Generate AI profile from all artifacts
-9. `GET /candidates/{id}/profile` - Get candidate's AI-generated profile
-
-**Legacy Endpoints:**
-1. `POST /ingest/upload` - Upload candidate resumes (legacy)
-2. `POST /match/rank` - Rank candidates against a job description (legacy)
-
-#### Feature Extraction
-- **Skills Detection**: Regex-based extraction for: python, fastapi, react, postgres, docker, kubernetes
-- **Culture Signals**: Detection of: shipped, launched, owned, documented
-
-#### Scoring Algorithm
-The ranking system uses a weighted scoring model:
-- **Skills Score (45%)**: Percentage of required skills matched
-- **Culture Score (20%)**: Presence of culture keywords (max 4)
-- **Potential Score (20%)**: Text similarity between resume and job description
-- **Domain Score (10%)**: Placeholder at 0.5
-- **Logistics Score (5%)**: Placeholder at 0.5
-
-### Frontend (Next.js 14)
-
-#### Pages
-1. **Home (/)**: Welcome page with "Go to App" button
-2. **Candidates List (/candidates)**: Professional table listing all candidates with status badges, location, and action buttons
-3. **Candidate Detail (/candidates/[id])**: Comprehensive candidate profile with materials management and AI analysis
-4. **Upload Candidates (/candidates/upload)**: Form to upload candidate resumes with name, email, and file upload
-5. **Rank Candidates (/jobs)**: Form to enter job description and rank all candidates
-
-#### Features
-- Beautiful TailwindCSS styling with responsive design
-- Navigation header across all pages
-- Real-time form validation
-- Success/error message display
-- Skills and culture signals visualization with badges
-- Comprehensive ranking table with score breakdowns
-- Progress bars for visual score representation
-
-### Technology Stack
-
-**Backend:**
-- FastAPI for REST API
-- SQLAlchemy for ORM and database management
-- SQLite for data persistence
-- Uvicorn as ASGI server
-- NumPy for calculations
-- Python-multipart for file uploads
-
-**Frontend:**
-- Next.js 14 with React 18
-- TailwindCSS for styling
-- Responsive design for mobile and desktop
-
-## How to Run
-
-Both servers run automatically via separate workflows:
-
-**Workflows:**
-- **Backend**: Runs FastAPI with Uvicorn on port 8000 (internal)
-  - Command: `uvicorn main:app --host 0.0.0.0 --port 8000`
-- **Frontend**: Runs Next.js dev server on port 5000 (webview)
-  - Command: `cd frontend && npm run dev`
-
-**Access the application:**
-- Frontend UI: View the webview (port 5000)
-- Backend API: https://6882bd3d-c5e2-4421-9eef-9d1c1ced7776-00-vjrvbrzqocvv.riker.replit.dev:8000
-
-**API Documentation:**
-- Access Swagger UI by opening the Backend workflow logs and clicking the docs URL
-- Endpoints: `/docs` for Swagger UI, `/redoc` for ReDoc
-
-## File Structure
-```
-.
-├── main.py              # FastAPI application and endpoints
-├── database.py          # SQLAlchemy models and database setup (7 tables)
-├── recruitr.db          # SQLite database (auto-created)
-├── example_usage.md     # API usage examples
-├── app/
-│   ├── routers/
-│   │   ├── __init__.py
-│   │   └── candidates.py # Candidate management API router
-│   └── services/
-│       ├── __init__.py
-│       └── ai_service.py # OpenAI GPT-4o-mini integration for AI analysis
-├── uploads/
-│   └── artifacts/       # Storage for uploaded candidate files
-├── frontend/
-│   ├── pages/
-│   │   ├── index.js     # Home page
-│   │   ├── candidates.js # Upload candidates page
-│   │   ├── jobs.js      # Rank candidates page
-│   │   └── _app.js      # App layout with navigation
-│   ├── styles/
-│   │   └── globals.css  # TailwindCSS styles
-│   ├── package.json     # Node.js dependencies
-│   ├── tailwind.config.js
-│   └── postcss.config.js
-├── pyproject.toml       # Python dependencies
-├── replit.md            # This file
-└── .gitignore           # Git ignore patterns
-```
-
-## Usage Flow
-
-1. **Upload Candidates**: Navigate to "Upload Candidates" and submit resume files with candidate information
-2. **View Detection Results**: See automatically detected skills and culture signals after upload
-3. **Rank Candidates**: Go to "Rank Candidates", enter a job description, and click "Rank Candidates"
-4. **Review Rankings**: View candidates sorted by overall score with detailed breakdowns of matched/missing skills
-
-## Future Enhancements
-- Advanced NLP for better skill extraction
-- Machine learning models for semantic matching
-- Candidate profile management endpoints
-- Feedback learning system
-- Job description templates
-- Bulk upload functionality
-- Candidate details modal with full resume view
-- Export rankings to CSV
-- Historical job rankings dashboard
+- **FastAPI**: Python web framework for building APIs.
+- **Next.js 14**: React framework for frontend development.
+- **TailwindCSS**: Utility-first CSS framework for styling.
+- **SQLAlchemy**: Python SQL toolkit and Object-Relational Mapper.
+- **SQLite**: Lightweight disk-based database.
+- **Uvicorn**: ASGI server for FastAPI.
+- **NumPy**: Library for numerical operations.
+- **Python-multipart**: Library for handling file uploads.
+- **OpenAI API**: For AI-powered text analysis, profile generation, and candidate scoring (GPT-4o-mini).

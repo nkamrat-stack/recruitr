@@ -8,6 +8,7 @@ import numpy as np
 
 from database import get_db, init_db, Candidate, Artifact
 from app.routers import candidates_router
+from app.routers.jobs import router as jobs_router
 
 app = FastAPI(title="Recruitr API")
 
@@ -20,6 +21,7 @@ app.add_middleware(
 )
 
 app.include_router(candidates_router)
+app.include_router(jobs_router)
 
 @app.on_event("startup")
 def startup_event():
