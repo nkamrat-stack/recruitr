@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Any
 from datetime import datetime, date
@@ -65,6 +66,7 @@ class CandidateResponse(BaseModel):
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
     artifact_count: int = 0
+    latest_artifact_uploaded_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -152,15 +154,29 @@ def list_candidates(
     
     candidates = query.all()
     
-    # Add artifact count for each candidate
+    # Use single aggregated query to get artifact stats for all candidates
+    artifact_stats = db.query(
+        CandidateArtifact.candidate_id,
+        func.count(CandidateArtifact.id).label('artifact_count'),
+        func.max(CandidateArtifact.uploaded_at).label('latest_uploaded_at')
+    ).group_by(CandidateArtifact.candidate_id).all()
+    
+    # Create lookup dictionary for O(1) access
+    stats_dict = {
+        stat.candidate_id: {
+            'artifact_count': stat.artifact_count,
+            'latest_artifact_uploaded_at': stat.latest_uploaded_at
+        }
+        for stat in artifact_stats
+    }
+    
+    # Merge stats with candidates
     result = []
     for candidate in candidates:
-        artifact_count = db.query(CandidateArtifact).filter(
-            CandidateArtifact.candidate_id == candidate.id
-        ).count()
-        
         candidate_dict = candidate.__dict__.copy()
-        candidate_dict['artifact_count'] = artifact_count
+        stats = stats_dict.get(candidate.id, {'artifact_count': 0, 'latest_artifact_uploaded_at': None})
+        candidate_dict['artifact_count'] = stats['artifact_count']
+        candidate_dict['latest_artifact_uploaded_at'] = stats['latest_artifact_uploaded_at']
         result.append(candidate_dict)
     
     return result

@@ -13,6 +13,7 @@ const BACKEND_URL = getBackendURL()
 export default function CandidatesList() {
   const router = useRouter()
   const [candidates, setCandidates] = useState([])
+  const [profiles, setProfiles] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -21,6 +22,16 @@ export default function CandidatesList() {
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [locationFilter, setLocationFilter] = useState('all')
+  const [aiStatusFilter, setAiStatusFilter] = useState('all')
+  const [scoreFilter, setScoreFilter] = useState('all')
+  
+  // Bulk generation state
+  const [bulkGenerating, setBulkGenerating] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 })
+  
+  // Sorting state
+  const [sortBy, setSortBy] = useState('score')
+  const [sortOrder, setSortOrder] = useState('desc')
   
   const [formData, setFormData] = useState({
     name: '',
@@ -44,11 +55,136 @@ export default function CandidatesList() {
       if (!response.ok) throw new Error('Failed to fetch candidates')
       const data = await response.json()
       setCandidates(data)
+      
+      // Fetch profiles for all candidates
+      await fetchAllProfiles(data)
+      
       setError(null)
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchAllProfiles = async (candidateList) => {
+    const profilesData = {}
+    
+    // Fetch profiles in parallel for better performance
+    await Promise.all(
+      candidateList.map(async (candidate) => {
+        try {
+          const response = await fetch(`${BACKEND_URL}/candidates/${candidate.id}/profile`)
+          if (response.ok) {
+            const profile = await response.json()
+            profilesData[candidate.id] = profile
+          }
+        } catch (err) {
+          // Profile doesn't exist, that's ok
+        }
+      })
+    )
+    
+    setProfiles(profilesData)
+  }
+
+  const getAIStatus = (candidate) => {
+    const profile = profiles[candidate.id]
+    
+    if (!profile) {
+      return 'not_analyzed'
+    }
+    
+    // Check if any artifacts were uploaded after the profile was generated
+    if (candidate.latest_artifact_uploaded_at && profile.last_ai_analysis) {
+      const lastArtifactDate = new Date(candidate.latest_artifact_uploaded_at)
+      const profileDate = new Date(profile.last_ai_analysis)
+      
+      if (lastArtifactDate > profileDate) {
+        return 'needs_update'
+      }
+    }
+    
+    return 'current'
+  }
+
+  const handleGenerateProfile = async (candidateId, skipRefresh = false) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/candidates/${candidateId}/generate-profile`, {
+        method: 'POST',
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Failed to generate profile')
+      }
+      
+      const profile = await response.json()
+      
+      // Update profiles state
+      setProfiles(prev => ({
+        ...prev,
+        [candidateId]: profile
+      }))
+      
+      // Only refresh if not in bulk operation
+      if (!skipRefresh) {
+        await fetchCandidates()
+      }
+      
+      return profile
+      
+    } catch (err) {
+      if (!skipRefresh) {
+        alert(`Error generating profile: ${err.message}`)
+      }
+      throw err
+    }
+  }
+
+  const handleBulkGenerateProfiles = async () => {
+    const candidatesWithoutProfiles = candidates.filter(c => !profiles[c.id])
+    
+    if (candidatesWithoutProfiles.length === 0) {
+      alert('All candidates already have profiles!')
+      return
+    }
+    
+    if (!confirm(`Generate profiles for ${candidatesWithoutProfiles.length} candidates? This may take a few minutes.`)) {
+      return
+    }
+    
+    setBulkGenerating(true)
+    setBulkProgress({ current: 0, total: candidatesWithoutProfiles.length })
+    
+    let successCount = 0
+    let errorCount = 0
+    
+    // Generate profiles without refreshing after each one
+    for (let i = 0; i < candidatesWithoutProfiles.length; i++) {
+      const candidate = candidatesWithoutProfiles[i]
+      setBulkProgress({ current: i + 1, total: candidatesWithoutProfiles.length })
+      
+      try {
+        await handleGenerateProfile(candidate.id, true) // skipRefresh = true
+        successCount++
+      } catch (err) {
+        console.error(`Failed to generate profile for ${candidate.name}:`, err)
+        errorCount++
+      }
+    }
+    
+    // Refresh once at the end
+    await fetchCandidates()
+    
+    setBulkGenerating(false)
+    setBulkProgress({ current: 0, total: 0 })
+    
+    // Show summary
+    if (errorCount > 0) {
+      alert(`Generated ${successCount} profiles successfully. ${errorCount} failed.`)
+    } else {
+      alert(`Successfully generated ${successCount} profiles!`)
     }
   }
 
@@ -70,23 +206,60 @@ export default function CandidatesList() {
     return [...new Set(locations)].sort()
   }, [candidates])
 
-  // Filter candidates based on search and filters
-  const filteredCandidates = useMemo(() => {
-    return candidates.filter(candidate => {
-      // Search filter
-      const matchesSearch = searchText === '' || 
-        candidate.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        candidate.email.toLowerCase().includes(searchText.toLowerCase())
-      
-      // Status filter
-      const matchesStatus = statusFilter === 'all' || candidate.status === statusFilter
-      
-      // Location filter
-      const matchesLocation = locationFilter === 'all' || candidate.location === locationFilter
-      
-      return matchesSearch && matchesStatus && matchesLocation
-    })
-  }, [candidates, searchText, statusFilter, locationFilter])
+  // Enrich candidates with AI data and filter
+  const enrichedAndFilteredCandidates = useMemo(() => {
+    return candidates
+      .map(candidate => ({
+        ...candidate,
+        aiStatus: getAIStatus(candidate),
+        score: profiles[candidate.id]?.overall_score || null
+      }))
+      .filter(candidate => {
+        // Search filter
+        const matchesSearch = searchText === '' || 
+          candidate.name.toLowerCase().includes(searchText.toLowerCase()) ||
+          candidate.email.toLowerCase().includes(searchText.toLowerCase())
+        
+        // Status filter
+        const matchesStatus = statusFilter === 'all' || candidate.status === statusFilter
+        
+        // Location filter
+        const matchesLocation = locationFilter === 'all' || candidate.location === locationFilter
+        
+        // AI Status filter
+        const matchesAIStatus = aiStatusFilter === 'all' || candidate.aiStatus === aiStatusFilter
+        
+        // Score filter
+        let matchesScore = true
+        if (scoreFilter !== 'all') {
+          if (!candidate.score) {
+            matchesScore = false
+          } else if (scoreFilter === '90+') {
+            matchesScore = candidate.score >= 0.9
+          } else if (scoreFilter === '80-89') {
+            matchesScore = candidate.score >= 0.8 && candidate.score < 0.9
+          } else if (scoreFilter === '70-79') {
+            matchesScore = candidate.score >= 0.7 && candidate.score < 0.8
+          } else if (scoreFilter === 'below70') {
+            matchesScore = candidate.score < 0.7
+          }
+        }
+        
+        return matchesSearch && matchesStatus && matchesLocation && matchesAIStatus && matchesScore
+      })
+      .sort((a, b) => {
+        // Sort by score
+        if (sortBy === 'score') {
+          if (a.score === null && b.score === null) return 0
+          if (a.score === null) return 1
+          if (b.score === null) return -1
+          
+          return sortOrder === 'desc' ? b.score - a.score : a.score - b.score
+        }
+        
+        return 0
+      })
+  }, [candidates, profiles, searchText, statusFilter, locationFilter, aiStatusFilter, scoreFilter, sortBy, sortOrder])
 
   const handleCreateCandidate = async (e) => {
     e.preventDefault()
@@ -130,6 +303,8 @@ export default function CandidatesList() {
     setSearchText('')
     setStatusFilter('all')
     setLocationFilter('all')
+    setAiStatusFilter('all')
+    setScoreFilter('all')
   }
 
   const getStatusBadgeColor = (status) => {
@@ -143,6 +318,15 @@ export default function CandidatesList() {
       deleted: 'bg-gray-100 text-gray-800',
     }
     return colors[status] || 'bg-gray-100 text-gray-800'
+  }
+
+  const getAIStatusBadge = (aiStatus) => {
+    const badges = {
+      current: { icon: '✅', text: 'Current', color: 'bg-green-100 text-green-800' },
+      needs_update: { icon: '⚠️', text: 'Needs Update', color: 'bg-yellow-100 text-yellow-800' },
+      not_analyzed: { icon: '❌', text: 'Not Analyzed', color: 'bg-gray-100 text-gray-800' },
+    }
+    return badges[aiStatus] || badges.not_analyzed
   }
 
   if (loading) {
@@ -175,6 +359,8 @@ export default function CandidatesList() {
     )
   }
 
+  const candidatesWithoutProfiles = candidates.filter(c => !profiles[c.id])
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
       <div className="flex justify-between items-center mb-8">
@@ -183,6 +369,18 @@ export default function CandidatesList() {
           <p className="text-gray-600 mt-2">{candidates.length} total candidates</p>
         </div>
         <div className="flex gap-3">
+          {candidatesWithoutProfiles.length > 0 && (
+            <button
+              onClick={handleBulkGenerateProfiles}
+              disabled={bulkGenerating}
+              className="bg-purple-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-purple-700 transition disabled:bg-gray-400"
+            >
+              {bulkGenerating 
+                ? `Generating ${bulkProgress.current}/${bulkProgress.total}...`
+                : `🤖 Generate All Profiles (${candidatesWithoutProfiles.length})`
+              }
+            </button>
+          )}
           <button
             onClick={() => router.push('/candidates/upload')}
             className="bg-green-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-green-700 transition"
@@ -243,8 +441,8 @@ export default function CandidatesList() {
 
       {/* Filters Bar */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="lg:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Search
             </label>
@@ -279,6 +477,42 @@ export default function CandidatesList() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
+              AI Status
+            </label>
+            <select
+              value={aiStatusFilter}
+              onChange={(e) => setAiStatusFilter(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All</option>
+              <option value="not_analyzed">Not Analyzed</option>
+              <option value="current">Current</option>
+              <option value="needs_update">Needs Update</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Score Range
+            </label>
+            <select
+              value={scoreFilter}
+              onChange={(e) => setScoreFilter(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Scores</option>
+              <option value="90+">90+</option>
+              <option value="80-89">80-89</option>
+              <option value="70-79">70-79</option>
+              <option value="below70">Below 70</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Second row for Location */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Location
             </label>
             <select
@@ -296,10 +530,10 @@ export default function CandidatesList() {
           </div>
         </div>
 
-        {(searchText || statusFilter !== 'all' || locationFilter !== 'all') && (
+        {(searchText || statusFilter !== 'all' || locationFilter !== 'all' || aiStatusFilter !== 'all' || scoreFilter !== 'all') && (
           <div className="mt-4 flex items-center justify-between">
             <p className="text-sm text-gray-600">
-              Showing {filteredCandidates.length} of {candidates.length} candidates
+              Showing {enrichedAndFilteredCandidates.length} of {candidates.length} candidates
             </p>
             <button
               onClick={clearFilters}
@@ -335,7 +569,7 @@ export default function CandidatesList() {
             Add First Candidate
           </button>
         </div>
-      ) : filteredCandidates.length === 0 ? (
+      ) : enrichedAndFilteredCandidates.length === 0 ? (
         <div className="bg-white rounded-lg shadow-md p-12 text-center">
           <svg
             className="mx-auto h-12 w-12 text-gray-400"
@@ -377,7 +611,16 @@ export default function CandidatesList() {
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  # Materials
+                  Materials
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  AI Status
+                </th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                >
+                  Score {sortOrder === 'desc' ? '↓' : '↑'}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -385,40 +628,90 @@ export default function CandidatesList() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredCandidates.map((candidate) => (
-                <tr key={candidate.id} className="hover:bg-gray-50 transition">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => router.push(`/candidates/${candidate.id}`)}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      {candidate.name}
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {candidate.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {candidate.location || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(candidate.status)}`}>
-                      {candidate.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {candidate.artifact_count || 0}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button
-                      onClick={() => router.push(`/candidates/${candidate.id}`)}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
-                    >
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {enrichedAndFilteredCandidates.map((candidate) => {
+                const aiStatusBadge = getAIStatusBadge(candidate.aiStatus)
+                const profile = profiles[candidate.id]
+                
+                return (
+                  <tr key={candidate.id} className="hover:bg-gray-50 transition">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => router.push(`/candidates/${candidate.id}`)}
+                        className="text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        {candidate.name}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {candidate.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {candidate.location || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(candidate.status)}`}>
+                        {candidate.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {candidate.artifact_count > 0 ? (
+                        <span className="font-medium">{candidate.artifact_count} items</span>
+                      ) : (
+                        <span className="text-gray-400">0 items</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1 ${aiStatusBadge.color}`}>
+                        <span>{aiStatusBadge.icon}</span>
+                        {aiStatusBadge.text}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {candidate.score !== null ? (
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-gray-900">
+                            {Math.round(candidate.score * 100)}/100
+                          </span>
+                          <div className="w-16 bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full"
+                              style={{ width: `${candidate.score * 100}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">--</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex gap-2">
+                        {!profile && (
+                          <button
+                            onClick={() => handleGenerateProfile(candidate.id)}
+                            className="bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700 transition text-xs font-semibold"
+                          >
+                            ▶️ Generate
+                          </button>
+                        )}
+                        {profile && candidate.aiStatus === 'needs_update' && (
+                          <button
+                            onClick={() => handleGenerateProfile(candidate.id)}
+                            className="bg-yellow-600 text-white px-3 py-1 rounded-md hover:bg-yellow-700 transition text-xs font-semibold"
+                          >
+                            🔄 Update
+                          </button>
+                        )}
+                        <button
+                          onClick={() => router.push(`/candidates/${candidate.id}`)}
+                          className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition text-xs font-semibold"
+                        >
+                          View
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

@@ -4,6 +4,34 @@
 Recruitr is a full-stack AI-powered recruiting application with a FastAPI backend and Next.js frontend. It helps rank and match candidates based on their resumes against job descriptions using a multi-factor scoring algorithm.
 
 ## Recent Changes
+- **October 27, 2025**: Candidates List Page - AI Profile Management Features
+  - **New Table Columns**:
+    * Materials column: Shows count (e.g., "1 items", "0 items")
+    * AI Status column: ✅ Current (green) | ⚠️ Needs Update (yellow) | ❌ Not Analyzed (gray)
+    * Score column: Shows overall_score from profile (e.g., "92/100") with progress bar, or "--" if no profile
+  - **Quick Action Buttons** (in Actions column):
+    * "▶️ Generate" button if no profile exists
+    * "🔄 Update" button if profile is outdated (materials uploaded after last_ai_analysis)
+    * "View" button always visible to navigate to detail page
+  - **Bulk Actions**:
+    * "🤖 Generate All Profiles (N)" button at top when candidates without profiles exist
+    * Shows progress counter during bulk generation: "Generating 1/50..."
+    * Disabled during processing
+  - **Enhanced Filters**:
+    * AI Status filter: All, Not Analyzed, Current, Needs Update
+    * Score Range filter: All Scores, 90+, 80-89, 70-79, Below 70
+    * Combined with existing Status and Location filters
+  - **Sortable Score Column**: Click to toggle ascending/descending, defaults to highest first
+  - **Backend Enhancements**:
+    * Added latest_artifact_uploaded_at field to CandidateResponse for AI status calculation
+    * Optimized list_candidates endpoint with single aggregated query using func.count() and func.max()
+    * Eliminates N+1 query pattern for production-ready performance
+  - **Frontend Optimizations**:
+    * Bulk generation only refreshes candidate list once at end (not after each profile)
+    * Progress tracking and success/error summary for bulk operations
+    * O(n) network complexity for scalability
+  - **Smart AI Status Detection**: Compares latest artifact upload time with profile.last_ai_analysis to determine if update needed
+
 - **October 27, 2025**: Candidate Detail Page - Logical Workflow Redesign
   - **New Workflow Order**: Header → Key Info Cards → 📤 ADD MATERIALS → 📁 MATERIALS LIST → ✅ REQUIRED MATERIALS CHECKLIST → 🤖 AI PROFILE ANALYSIS (bottom)
   - **Workflow Philosophy**: Add materials → See what you collected → Check compliance → Analyze with AI
