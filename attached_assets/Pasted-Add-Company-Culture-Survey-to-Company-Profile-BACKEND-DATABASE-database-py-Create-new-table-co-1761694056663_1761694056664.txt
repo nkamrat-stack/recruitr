@@ -1,0 +1,89 @@
+Add Company Culture Survey to Company Profile:
+
+BACKEND DATABASE (database.py):
+Create new table: company_culture_profile
+
+Fields:
+- id (primary key)
+- company_id (foreign key to company_profile)
+- created_at, updated_at
+
+Work Style Dimensions (1-10 sliders):
+- pace_score (1=Deliberate, 10=Fast-paced)
+- autonomy_score (1=Heavily Managed, 10=Self-Directed)
+- communication_score (1=Formal, 10=Casual)
+- decision_making_score (1=Consensus-Driven, 10=Top-Down)
+- risk_tolerance_score (1=Conservative, 10=Experimental)
+- work_location_score (1=In-Office, 10=Fully Remote)
+- schedule_flexibility_score (1=Fixed Hours, 10=Flexible)
+- growth_path_score (1=Specialist, 10=Generalist)
+
+Values Selection:
+- core_values (JSON array) - Top 5-10 selected values
+
+Soft Skills Importance (1-10):
+- communication_importance
+- problem_solving_importance
+- adaptability_importance
+- leadership_importance
+- technical_depth_importance
+- collaboration_importance
+
+BACKEND API (app/routers/company.py):
+Add endpoints:
+- POST /company/culture - Create/update culture profile
+- GET /company/culture - Get current culture profile
+
+FRONTEND - CULTURE SURVEY PAGE (pages/settings/culture.js):
+Create comprehensive survey with 3 sections:
+
+SECTION 1: Work Style Dimensions (8 sliders)
+For each dimension, show:
+- Slider (1-10)
+- Left label and right label (e.g., "Deliberate" ←→ "Fast-paced")
+- Help text explaining the dimension
+- Visual indicator showing current position
+
+Example questions:
+1. PACE: "How fast-paced is your work environment?"
+   [Deliberate/Thoughtful] 1—2—3—4—5—6—7—8—9—10 [Fast-paced/Urgent]
+
+2. AUTONOMY: "How much autonomy do employees have?"
+   [Heavily Managed] 1—2—3—4—5—6—7—8—9—10 [Self-Directed]
+
+(Continue for all 8 dimensions)
+
+SECTION 2: Core Values Selection
+- Display 30 value options as clickable cards
+- User can select 5-10 values
+- Values include: Accountability, Innovation, Transparency, Excellence, 
+  Customer Focus, Work-Life Balance, Collaboration, Integrity, Diversity,
+  Speed, Quality, Autonomy, Mentorship, Results, Creativity, Ownership,
+  Empathy, Growth, Impact, Learning, Trust, Respect, Inclusion, 
+  Sustainability, Efficiency, Fun, Flexibility, Courage, Humility, Teamwork
+
+- Show counter: "Selected 5 of 10 maximum"
+
+SECTION 3: Soft Skills Importance (6 sliders 1-10)
+Rate importance of:
+1. Communication skills
+2. Problem-solving ability
+3. Adaptability
+4. Leadership potential
+5. Technical depth
+6. Collaboration skills
+
+UI DESIGN:
+- Professional survey layout with progress indicator
+- Save button at bottom
+- "Back to Company Profile" link
+- Success message after saving
+- Show completion status on Company Profile page
+
+NAVIGATION:
+Add "Culture Survey" link/button on Company Profile page:
+- If not completed: Show "📋 Complete Culture Survey" (orange badge)
+- If completed: Show "✅ Culture Profile Complete" (green badge) with "Edit" option
+
+Make the survey feel professional and comprehensive but not overwhelming.
+Use Tailwind for clean, modern design.

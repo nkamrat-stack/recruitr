@@ -188,6 +188,38 @@ class CompanyProfile(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class CompanyCultureProfile(Base):
+    __tablename__ = "company_culture_profile"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("company_profile.id"), unique=True, nullable=False)
+    
+    # Work Style Dimensions (1-10 sliders)
+    pace_score = Column(Integer)  # 1=Deliberate, 10=Fast-paced
+    autonomy_score = Column(Integer)  # 1=Heavily Managed, 10=Self-Directed
+    communication_score = Column(Integer)  # 1=Formal, 10=Casual
+    decision_making_score = Column(Integer)  # 1=Consensus-Driven, 10=Top-Down
+    risk_tolerance_score = Column(Integer)  # 1=Conservative, 10=Experimental
+    work_location_score = Column(Integer)  # 1=In-Office, 10=Fully Remote
+    schedule_flexibility_score = Column(Integer)  # 1=Fixed Hours, 10=Flexible
+    growth_path_score = Column(Integer)  # 1=Specialist, 10=Generalist
+    
+    # Core Values (JSON array - Top 5-10 selected values)
+    core_values = Column(Text)  # JSON array
+    
+    # Soft Skills Importance (1-10)
+    communication_importance = Column(Integer)
+    problem_solving_importance = Column(Integer)
+    adaptability_importance = Column(Integer)
+    leadership_importance = Column(Integer)
+    technical_depth_importance = Column(Integer)
+    collaboration_importance = Column(Integer)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    company = relationship("CompanyProfile")
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 
