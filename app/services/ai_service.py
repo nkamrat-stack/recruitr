@@ -11,9 +11,12 @@ MODEL = "gpt-4o-mini"
 TEMPERATURE = 0.3
 
 
-def get_openai_client() -> Optional[OpenAI]:
+def get_openai_client(timeout: float = 30.0) -> Optional[OpenAI]:
     """
     Returns configured OpenAI client using OPENAI_API_KEY from environment.
+    
+    Args:
+        timeout: Request timeout in seconds (default: 30.0)
     
     Returns:
         OpenAI client instance or None if API key is missing
@@ -28,7 +31,7 @@ def get_openai_client() -> Optional[OpenAI]:
         client = OpenAI(
             api_key=api_key,
             max_retries=2,
-            timeout=30.0
+            timeout=timeout
         )
         logger.info("OpenAI client initialized successfully")
         return client
@@ -279,25 +282,14 @@ def parse_linkedin_job(linkedin_text: str) -> Dict[str, Any]:
             - work_requirements: Dict with timezone, visa, remote_ok, etc.
             - must_have_questions: List of {question: str, ideal_answer: str}
             - preferred_questions: List of {question: str, ideal_answer: str}
+    
+    Raises:
+        ValueError: If OpenAI client is not available or API returns invalid response
+        Exception: For OpenAI API errors (timeout, rate limit, etc.)
     """
-    client = get_openai_client()
+    client = get_openai_client(timeout=90.0)
     if not client:
-        logger.error("Cannot parse LinkedIn job: OpenAI client not available")
-        return {
-            "display_html": "",
-            "job_title": "",
-            "description": "",
-            "required_skills": [],
-            "nice_to_have_skills": [],
-            "salary_min": None,
-            "salary_max": None,
-            "location": None,
-            "experience_min_years": None,
-            "experience_max_years": None,
-            "work_requirements": {},
-            "must_have_questions": [],
-            "preferred_questions": []
-        }
+        raise ValueError("OpenAI API key not configured. Please add your OPENAI_API_KEY to environment variables.")
     
     prompt = f"""Extract this LinkedIn job post in TWO formats:
 
@@ -385,29 +377,35 @@ Be robust - handle different formats and missing sections gracefully."""
         
         content = response.choices[0].message.content
         if not content:
-            raise ValueError("Empty response from OpenAI API")
+            raise ValueError("OpenAI API returned an empty response. Please try again.")
         
         result = json.loads(content)
+        
+        # Validate required fields
+        if not result.get("job_title"):
+            raise ValueError("Failed to extract job title from LinkedIn post. Please ensure the text contains a complete job posting.")
+        
         logger.info(f"Successfully parsed LinkedIn job: {result.get('job_title', 'Unknown')}")
         return result
         
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON from OpenAI API: {str(e)}")
+        raise ValueError(f"OpenAI API returned invalid JSON. Please try again or contact support if the issue persists.")
+    
     except Exception as e:
-        logger.error(f"Error parsing LinkedIn job: {str(e)}")
-        return {
-            "display_html": "",
-            "job_title": "",
-            "description": "",
-            "required_skills": [],
-            "nice_to_have_skills": [],
-            "salary_min": None,
-            "salary_max": None,
-            "location": None,
-            "experience_min_years": None,
-            "experience_max_years": None,
-            "work_requirements": {},
-            "must_have_questions": [],
-            "preferred_questions": []
-        }
+        error_msg = str(e)
+        logger.error(f"Error parsing LinkedIn job: {error_msg}")
+        
+        # Provide specific error messages based on error type
+        if "timed out" in error_msg.lower() or "timeout" in error_msg.lower():
+            raise Exception("Request timed out. The job post may be too long. Please try with a shorter job posting or try again.")
+        elif "rate" in error_msg.lower() and "limit" in error_msg.lower():
+            raise Exception("OpenAI API rate limit exceeded. Please wait a moment and try again.")
+        elif "api key" in error_msg.lower():
+            raise ValueError("Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable.")
+        else:
+            # Re-raise the original exception with its message
+            raise Exception(f"Failed to parse LinkedIn job: {error_msg}")
 
 
 def score_candidate_for_job(candidate_profile: Dict[str, Any], job_requirements: Dict[str, Any]) -> Dict[str, Any]:

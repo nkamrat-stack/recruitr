@@ -292,17 +292,27 @@ def parse_linkedin_job_post(request: ParseLinkedInRequest):
     Parse a LinkedIn job post and extract structured data including screening questions.
     Uses AI to extract job fields and screening questions with ideal answers.
     """
-    result = parse_linkedin_job(request.linkedin_text)
+    try:
+        result = parse_linkedin_job(request.linkedin_text)
+        logger.info(f"Successfully parsed LinkedIn job: {result.get('job_title')}")
+        return ParseLinkedInResponse(**result)
     
-    if not result or not result.get("job_title"):
+    except ValueError as e:
+        # Client errors (bad input, missing API key, etc.)
+        logger.error(f"Validation error parsing LinkedIn job: {str(e)}")
         raise HTTPException(
-            status_code=500,
-            detail="Failed to parse LinkedIn job post. Please ensure the text contains a complete job posting."
+            status_code=400,
+            detail=str(e)
         )
     
-    logger.info(f"Successfully parsed LinkedIn job: {result.get('job_title')}")
-    
-    return ParseLinkedInResponse(**result)
+    except Exception as e:
+        # Server errors (timeout, rate limit, API errors, etc.)
+        error_msg = str(e)
+        logger.error(f"Error parsing LinkedIn job: {error_msg}")
+        raise HTTPException(
+            status_code=500,
+            detail=error_msg
+        )
 
 
 class ParseDescriptionRequest(BaseModel):
