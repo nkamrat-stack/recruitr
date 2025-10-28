@@ -25,6 +25,7 @@ export default function JobsList() {
   const [importTitle, setImportTitle] = useState('')
   const [importLocation, setImportLocation] = useState('')
   const [importDescription, setImportDescription] = useState('')
+  const [importScreeningQuestions, setImportScreeningQuestions] = useState('')
 
   const [formData, setFormData] = useState({
     title: '',
@@ -280,19 +281,27 @@ export default function JobsList() {
       // Convert description to HTML (no AI, instant)
       const displayHtml = textToHtml(importDescription)
       
+      // Prepare job data
+      const jobData = {
+        title: importTitle,
+        location: importLocation,
+        description: importDescription,
+        display_description: displayHtml,
+        linkedin_original_text: importDescription,
+        extraction_status: 'not_extracted',
+        status: 'open',
+      }
+      
+      // Add screening questions if provided
+      if (importScreeningQuestions.trim()) {
+        jobData.screening_questions_text = importScreeningQuestions
+      }
+      
       // Create job with extraction_status = "not_extracted"
       const response = await fetch(`${BACKEND_URL}/jobs/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: importTitle,
-          location: importLocation,
-          description: importDescription,
-          display_description: displayHtml,
-          linkedin_original_text: importDescription,
-          extraction_status: 'not_extracted',
-          status: 'open',
-        }),
+        body: JSON.stringify(jobData),
       })
 
       if (!response.ok) {
@@ -307,6 +316,7 @@ export default function JobsList() {
       setImportTitle('')
       setImportLocation('')
       setImportDescription('')
+      setImportScreeningQuestions('')
       
       // Redirect to job detail page
       router.push(`/jobs/${newJob.id}`)
@@ -1281,13 +1291,30 @@ export default function JobsList() {
                   Job Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  rows={12}
+                  rows={8}
                   value={importDescription}
                   onChange={(e) => setImportDescription(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 font-mono text-sm"
                   placeholder="Paste the complete LinkedIn job description here...&#10;&#10;About The Role&#10;We are seeking a talented engineer...&#10;&#10;Requirements&#10;- 5+ years of experience with Python&#10;- Strong knowledge of React&#10;..."
                   required
                 />
+              </div>
+
+              {/* Screening Questions (Optional) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Screening Questions <span className="text-gray-500">(Optional)</span>
+                </label>
+                <textarea
+                  rows={6}
+                  value={importScreeningQuestions}
+                  onChange={(e) => setImportScreeningQuestions(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                  placeholder="Paste screening questions from LinkedIn (if any)...&#10;&#10;Must-have Qualifications:&#10;- Do you have 5+ years of Python experience?&#10;- Can you work PST hours?&#10;&#10;Preferred Qualifications:&#10;- Experience with React?&#10;..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  💡 Paste LinkedIn's "Must-have" and "Preferred" qualification questions here. AI will extract them during requirement analysis.
+                </p>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
@@ -1304,6 +1331,7 @@ export default function JobsList() {
                     setImportTitle('')
                     setImportLocation('')
                     setImportDescription('')
+                    setImportScreeningQuestions('')
                   }}
                   className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                   disabled={importing}
