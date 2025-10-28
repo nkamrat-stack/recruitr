@@ -26,12 +26,16 @@ Do not make changes to the file `Y`.
 - **API Endpoints**:
   - **Candidates**: CRUD operations, artifact management, AI profile generation and retrieval.
   - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools, candidate matching, multi-level evaluation pipelines, LinkedIn import with screening questions.
-    - `POST /jobs/parse-linkedin`: Parse complete LinkedIn job posts using TWO-CALL AI architecture for exact content preservation.
-      - **CALL 1 (Display HTML)**: Converts full LinkedIn text to HTML while preserving EVERY word (no summarization)
-      - **CALL 2 (Structured Data)**: Extracts DETAILED structured data with FULL requirement texts
-      - Model: GPT-4o-2024-08-06 with 16,384 max_tokens (supports very long posts up to ~50K characters)
-      - Extracts: job_title, description summary, FULL required_skills texts, FULL nice_to_have_skills texts, salary range, location, experience years, work requirements
-      - Extracts screening questions: must_have_questions and preferred_questions with {question, ideal_answer} structure
+    - `POST /jobs/parse-linkedin`: Parse complete LinkedIn job posts using simple text-to-HTML conversion + AI extraction.
+      - **Display HTML (NO AI)**: Simple regex-based text-to-HTML conversion preserving EVERY word (zero summarization possible)
+        - Detects bullets (•, -, *), headers (ALL CAPS or ending with :), paragraphs
+        - Pure text processing - guarantees exact content with just HTML tags added
+        - Instant conversion with no API calls
+      - **Structured Data (AI)**: GPT-4o-2024-08-06 extracts DETAILED data with FULL requirement texts
+        - Model: GPT-4o-2024-08-06 with 16,384 max_tokens (supports very long posts)
+        - Extracts: job_title, description summary, FULL required_skills texts, FULL nice_to_have_skills texts
+        - Extracts: salary range, location, experience years, work requirements
+        - Extracts screening questions: must_have_questions and preferred_questions with {question, ideal_answer}
       - Returns both display_html (exact formatted content) and structured_data (detailed JSON for AI matching)
       - No truncation: Preserves entire LinkedIn post without character limits
     - `POST /jobs/parse-description`: Parse LinkedIn job descriptions and extract structured fields using AI (legacy endpoint).

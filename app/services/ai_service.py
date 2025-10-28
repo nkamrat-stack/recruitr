@@ -258,13 +258,90 @@ Ensure all scores are between 0 and 1. Base years_experience on evidence in the 
         }
 
 
+def text_to_html(text: str) -> str:
+    """
+    Convert plain text to HTML using simple regex patterns.
+    Guarantees ZERO summarization - just adds HTML tags to existing text.
+    HTML-escapes special characters to preserve exact content.
+    
+    Args:
+        text: Raw text from LinkedIn job posting
+        
+    Returns:
+        HTML string with formatting tags added and special characters escaped
+    """
+    import re
+    import html
+    
+    if not text:
+        return ""
+    
+    # Split into lines for processing
+    lines = text.split('\n')
+    html_lines = []
+    in_list = False
+    
+    for line in lines:
+        stripped = line.strip()
+        
+        # Skip empty lines but preserve paragraph breaks
+        if not stripped:
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            html_lines.append('<br>')
+            continue
+        
+        # HTML-escape the content to preserve special characters like <, >, &, ", '
+        escaped = html.escape(stripped)
+        
+        # Detect bullet points (starts with • or - or *)
+        if re.match(r'^[•\-\*]\s+', stripped):
+            bullet_text = re.sub(r'^[•\-\*]\s+', '', escaped)
+            if not in_list:
+                html_lines.append('<ul>')
+                in_list = True
+            html_lines.append(f'<li>{bullet_text}</li>')
+            continue
+        
+        # Detect numbered lists (starts with 1. or 2. etc)
+        if re.match(r'^\d+\.\s+', stripped):
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            # For numbered items, just treat as regular text
+            html_lines.append(f'<p>{escaped}</p>')
+            continue
+        
+        # Close list if we were in one
+        if in_list:
+            html_lines.append('</ul>')
+            in_list = False
+        
+        # Detect headers (ALL CAPS or ends with colon)
+        if stripped.isupper() and len(stripped) > 3:
+            html_lines.append(f'<h2>{escaped}</h2>')
+        elif stripped.endswith(':') and len(stripped) > 3 and len(stripped.split()) <= 6:
+            html_lines.append(f'<h2>{escaped}</h2>')
+        else:
+            # Regular paragraph
+            html_lines.append(f'<p>{escaped}</p>')
+    
+    # Close any open list
+    if in_list:
+        html_lines.append('</ul>')
+    
+    return '\n'.join(html_lines)
+
+
 def parse_linkedin_job(linkedin_text: str) -> Dict[str, Any]:
     """
-    Parses a LinkedIn job post and extracts DUAL formats using TWO separate API calls:
-    1. display_html - Preserves EXACT original content with HTML formatting (no summarization)
-    2. structured_data - Extracts DETAILED structured information for AI matching
+    Parses a LinkedIn job post and extracts DUAL formats:
+    1. display_html - Simple text-to-HTML conversion (NO AI, ZERO summarization possible)
+    2. structured_data - AI extracts DETAILED structured information for matching
     
-    Uses GPT-4o for better instruction following and content preservation.
+    Uses simple regex for display formatting (guarantees exact content)
+    Uses GPT-4o-2024-08-06 only for structured data extraction
     
     Args:
         linkedin_text: Raw text from LinkedIn job posting
@@ -294,48 +371,12 @@ def parse_linkedin_job(linkedin_text: str) -> Dict[str, Any]:
         raise ValueError("OpenAI API key not configured. Please add your OPENAI_API_KEY to environment variables.")
     
     try:
-        # ===== CALL 1: Generate display_html (simple formatting task) =====
-        display_prompt = f"""CRITICAL: DO NOT SUMMARIZE ANYTHING. Preserve EVERY word, bullet point, and section EXACTLY as written.
-
-Convert this LinkedIn job post to clean HTML with proper formatting:
-
-LinkedIn Job Text:
-{linkedin_text}
-
-INSTRUCTIONS:
-- Keep ALL sections: Position Overview, Key Responsibilities, Required Qualifications, Preferred Qualifications, Benefits, etc.
-- Keep ALL bullet points and sub-bullets exactly as they appear
-- Keep ALL details - do not condense or shorten anything
-- Use HTML tags: <h2> for section headers, <ul><li> for bullets, <strong> for emphasis, <p> for paragraphs
-- The output should be as long as the input - if input is 5000 words, output is 5000 words in HTML
-- DO NOT create a summary - convert the ENTIRE text to HTML preserving every single word
-
-Return ONLY the HTML string (no JSON, no wrapping)."""
-
-        display_response = client.chat.completions.create(
-            model="gpt-4o-2024-08-06",  # Using GPT-4o with 16K output support for better instruction following
-            temperature=0.1,  # Low temperature for exact preservation
-            max_tokens=16384,  # GPT-4o-2024-08-06 maximum output tokens - allows very long job descriptions
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are an HTML formatter. Your ONLY job is to convert text to HTML while preserving EVERY single word. Never summarize, never condense, never skip content."
-                },
-                {
-                    "role": "user",
-                    "content": display_prompt
-                }
-            ]
-        )
-        
-        display_html = display_response.choices[0].message.content
-        if not display_html:
-            raise ValueError("Failed to generate display HTML. Please try again.")
-        
-        logger.info("Successfully generated display_html")
+        # ===== STEP 1: Generate display_html using simple text-to-HTML conversion (NO AI) =====
+        display_html = text_to_html(linkedin_text)
+        logger.info("Successfully converted text to HTML (no AI, zero summarization)")
         
         
-        # ===== CALL 2: Extract structured_data (complex extraction task) =====
+        # ===== STEP 2: Extract structured_data using AI (complex extraction task) =====
         structured_prompt = f"""Extract DETAILED structured data from this LinkedIn job post. DO NOT SUMMARIZE SKILLS.
 
 LinkedIn Job Text:
