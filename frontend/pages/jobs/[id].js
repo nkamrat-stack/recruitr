@@ -25,6 +25,7 @@ export default function JobDetail() {
   const [editedPreferredQuals, setEditedPreferredQuals] = useState([])
   const [editedCompetencies, setEditedCompetencies] = useState([])
   const [savingWeights, setSavingWeights] = useState(false)
+  const [showCopyToast, setShowCopyToast] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -131,6 +132,18 @@ export default function JobDetail() {
     const updated = [...editedCompetencies]
     updated[index] = { ...updated[index], importance: parseInt(newImportance) }
     setEditedCompetencies(updated)
+  }
+
+  const handleCopyJob = async () => {
+    const formattedText = `${job.title}\n${job.location ? job.location + '\n' : ''}\n${job.display_description ? job.display_description.replace(/<[^>]*>/g, '\n').replace(/\n\n+/g, '\n\n') : job.description || ''}`
+    
+    try {
+      await navigator.clipboard.writeText(formattedText)
+      setShowCopyToast(true)
+      setTimeout(() => setShowCopyToast(false), 3000)
+    } catch (err) {
+      alert('Failed to copy to clipboard')
+    }
   }
 
   if (loading) {
@@ -287,44 +300,53 @@ export default function JobDetail() {
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-md">
           <div className="border-b border-gray-200">
-            <div className="flex">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            <div className="flex justify-between items-center px-4">
+              <div className="flex">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+                      activeTab === tab.id
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={handleCopyJob}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition text-sm font-medium flex items-center gap-2"
+              >
+                📋 Copy Formatted Job
+              </button>
             </div>
           </div>
 
           <div className="p-6">
             {/* Description Tab */}
             {activeTab === 'description' && (
-              <div>
+              <div className="max-w-4xl mx-auto">
                 {job.display_description ? (
                   <div 
-                    className="prose max-w-none"
+                    className="prose prose-lg max-w-none bg-white p-8 rounded-lg border border-gray-200"
                     dangerouslySetInnerHTML={{ 
                       __html: DOMPurify.sanitize(job.display_description, {
                         ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'br', 'div', 'span'],
-                        ALLOWED_ATTR: ['class', 'style']
+                        ALLOWED_ATTR: ['class']
                       }) 
                     }}
                     style={{
-                      lineHeight: '1.7',
+                      fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+                      lineHeight: '1.8',
                       color: '#374151'
                     }}
                   />
                 ) : job.description ? (
-                  <div className="prose max-w-none">
-                    <p className="text-gray-700 whitespace-pre-wrap">{job.description}</p>
+                  <div className="prose prose-lg max-w-none bg-white p-8 rounded-lg border border-gray-200">
+                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{job.description}</p>
                   </div>
                 ) : (
                   <p className="text-gray-500 italic">No description available</p>
@@ -801,6 +823,14 @@ export default function JobDetail() {
           </button>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {showCopyToast && (
+        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
+          <span className="text-xl">✅</span>
+          <span className="font-medium">Job copied to clipboard!</span>
+        </div>
+      )}
     </div>
   )
 }
