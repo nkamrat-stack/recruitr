@@ -26,10 +26,14 @@ Do not make changes to the file `Y`.
 - **API Endpoints**:
   - **Candidates**: CRUD operations, artifact management, AI profile generation and retrieval.
   - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools, candidate matching, multi-level evaluation pipelines, LinkedIn import with screening questions.
-    - `POST /jobs/parse-linkedin`: Parse complete LinkedIn job posts and extract structured data including screening questions using AI.
-      - Extracts: job_title, description, required_skills (array), nice_to_have_skills (array), salary range, location
+    - `POST /jobs/parse-linkedin`: Parse complete LinkedIn job posts using TWO-CALL AI architecture for exact content preservation.
+      - **CALL 1 (Display HTML)**: Converts full LinkedIn text to HTML while preserving EVERY word (no summarization)
+      - **CALL 2 (Structured Data)**: Extracts DETAILED structured data with FULL requirement texts
+      - Model: GPT-4o-2024-08-06 with 16,384 max_tokens (supports very long posts up to ~50K characters)
+      - Extracts: job_title, description summary, FULL required_skills texts, FULL nice_to_have_skills texts, salary range, location, experience years, work requirements
       - Extracts screening questions: must_have_questions and preferred_questions with {question, ideal_answer} structure
-      - Returns structured JSON for auto-filling job creation form
+      - Returns both display_html (exact formatted content) and structured_data (detailed JSON for AI matching)
+      - No truncation: Preserves entire LinkedIn post without character limits
     - `POST /jobs/parse-description`: Parse LinkedIn job descriptions and extract structured fields using AI (legacy endpoint).
     - `POST /jobs/generate-description`: Generate professional job descriptions from job fields using AI.
     - `GET /jobs/{job_id}/matches`: Retrieve existing candidate matches for a job.
