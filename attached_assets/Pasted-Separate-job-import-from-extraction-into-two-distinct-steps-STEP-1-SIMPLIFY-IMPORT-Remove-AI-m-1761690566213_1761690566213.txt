@@ -1,0 +1,49 @@
+Separate job import from extraction into two distinct steps:
+
+STEP 1 - SIMPLIFY IMPORT (Remove AI, make instant):
+
+1. Update "Import from LinkedIn" modal to have 3 simple fields:
+   - Job Title (text input, required)
+   - Location (text input, required)
+   - Job Description (large textarea, required - paste full LinkedIn text)
+   - Button: "Import Job" (NOT "Parse with AI")
+
+2. When user clicks "Import Job":
+   - Convert description to HTML using text_to_html() (no AI)
+   - Save job with: job_title, location, display_description, extraction_status="not_extracted"
+   - Do NOT call parse_linkedin_job() or extract taxonomy
+   - Close modal immediately, show job in list
+   - Should be instant (~1 second)
+
+STEP 2 - ADD EXTRACTION BUTTON TO JOB DETAIL PAGE:
+
+1. On job detail page (pages/jobs/[id].js), add prominent button at top:
+   - If extraction_status = "not_extracted": Show big button "Extract Job Requirements"
+   - If extraction_status = "extracted": Show badge "✅ Requirements Extracted" + small button "Re-extract"
+   - If extraction_status = "extracting": Show loading spinner "Extracting requirements..."
+
+2. When user clicks "Extract Job Requirements":
+   - Call new endpoint: POST /jobs/{id}/extract-requirements
+   - Show loading state
+   - After completion, reload page to show extracted data
+   - Update extraction_status to "extracted"
+
+3. Create new backend endpoint: POST /jobs/{id}/extract-requirements
+   - Gets job by ID
+   - Calls parse_linkedin_job(job.display_description) with full taxonomy extraction
+   - Saves all 7 JSON fields to job record
+   - Updates extraction_status = "extracted"
+   - Returns success
+
+DISABLE MATCHING UNTIL EXTRACTED:
+
+1. On job detail page, "View Candidate Matches" button should:
+   - Be disabled (grayed out) if extraction_status != "extracted"
+   - Show tooltip: "Extract job requirements first"
+   - Be enabled (blue) if extraction_status = "extracted"
+
+2. On jobs list page, add extraction status badge to each job card:
+   - Gray badge "Not Parsed" if extraction_status = "not_extracted"
+   - Green badge "Parsed" if extraction_status = "extracted"
+
+The workflow should be crystal clear: Import (instant) → Extract (20 seconds) → Match

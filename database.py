@@ -124,6 +124,9 @@ class Job(Base):
     work_requirements = Column(Text)
     application_deliverables = Column(Text)
     
+    # Extraction status tracking
+    extraction_status = Column(String, default='not_extracted')
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     
     matches = relationship("Match", back_populates="job")
