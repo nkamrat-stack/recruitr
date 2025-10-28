@@ -752,27 +752,35 @@ export default function JobsList() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 pt-4 border-t border-gray-200">
+                  <div className="flex flex-col gap-2 pt-4 border-t border-gray-200">
                     <button
-                      onClick={() => router.push(`/jobs/${job.id}/matches`)}
-                      className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition text-sm font-semibold"
+                      onClick={() => router.push(`/jobs/${job.id}`)}
+                      className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-md hover:from-purple-700 hover:to-blue-700 transition text-sm font-semibold shadow-md"
                     >
-                      View Matches
+                      📄 View Job
                     </button>
-                    <button
-                      onClick={() => handleEdit(job)}
-                      className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-200 transition"
-                      title="Edit"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleDelete(job.id)}
-                      className="bg-red-50 text-red-600 px-3 py-2 rounded-md hover:bg-red-100 transition"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => router.push(`/jobs/${job.id}/matches`)}
+                        className="flex-1 bg-blue-100 text-blue-700 px-4 py-2 rounded-md hover:bg-blue-200 transition text-sm font-medium"
+                      >
+                        View Matches
+                      </button>
+                      <button
+                        onClick={() => handleEdit(job)}
+                        className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-200 transition"
+                        title="Edit"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleDelete(job.id)}
+                        className="bg-red-50 text-red-600 px-3 py-2 rounded-md hover:bg-red-100 transition"
+                        title="Delete"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -783,12 +791,36 @@ export default function JobsList() {
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            setShowModal(false)
+            setEditingJob(null)
+            resetForm()
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center">
               <h2 className="text-2xl font-bold text-gray-900">
                 {editingJob ? 'Edit Job' : 'Create New Job'}
               </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowModal(false)
+                  setEditingJob(null)
+                  resetForm()
+                }}
+                className="text-gray-400 hover:text-gray-600 transition"
+                title="Close"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
@@ -1190,9 +1222,9 @@ export default function JobsList() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:from-purple-700 hover:to-blue-700"
+                  className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:from-purple-700 hover:to-blue-700 font-semibold"
                 >
-                  {editingJob ? 'Update Job' : 'Create Job'}
+                  {editingJob ? 'Save Changes' : 'Create Job'}
                 </button>
               </div>
             </form>
