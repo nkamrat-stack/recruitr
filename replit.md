@@ -19,6 +19,10 @@ Do not make changes to the file `Y`.
 **Backend (FastAPI)**
 - **Database**: SQLite, managed with SQLAlchemy ORM.
   - **Schema**: `candidates`, `candidate_artifacts`, `candidate_profiles`, `jobs`, `matches`, `feedback`, `company_profile`.
+  - **Jobs Table**: Includes dual-format LinkedIn storage:
+    - `linkedin_original_text` - Raw pasted LinkedIn job text
+    - `display_description` - HTML-formatted description preserving original LinkedIn structure
+    - `description` - AI-generated summary for quick reference
 - **API Endpoints**:
   - **Candidates**: CRUD operations, artifact management, AI profile generation and retrieval.
   - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools, candidate matching, multi-level evaluation pipelines, LinkedIn import with screening questions.
@@ -51,16 +55,26 @@ Do not make changes to the file `Y`.
   - **Home (`/`)**: Entry point.
   - **Candidates List (`/candidates`)**: Displays all candidates with AI status, scores, and bulk actions.
   - **Candidate Detail (`/candidates/[id]`)**: Comprehensive view with materials management, compliance checklist, and AI analysis.
-  - **Jobs List (`/jobs`)**: Manages job postings with AI-powered creation tools:
-    - **Import from LinkedIn**: Advanced AI-powered LinkedIn job parser:
+  - **Jobs List (`/jobs`)**: Manages job postings with AI-powered creation tools.
+  - **Job Detail (`/jobs/[id]`)**: Tabbed interface for comprehensive job viewing:
+    - **Description Tab**: Displays LinkedIn job in original format with HTML rendering (sanitized with DOMPurify)
+    - **Requirements Tab**: Shows structured data (required/nice-to-have skills, evaluation pipeline)
+    - **Screening Questions Tab**: Lists all screening questions with required/preferred badges
+    - Professional design with job header (title, location, salary, hours, status badges)
+    - Actions: "View Candidate Matches" and "Edit Job" buttons
+    - **Import from LinkedIn**: Advanced AI-powered LinkedIn job parser with dual-format extraction:
       - Paste complete LinkedIn job posts (including job description, must-have qualifications, preferred qualifications)
-      - AI extracts all fields: job title, description, skills (required/nice-to-have), salary, location
+      - **Dual Format Extraction**:
+        * **Display Format**: Preserves EXACT original LinkedIn formatting using HTML (sections, bullets, headings, bold text)
+        * **Structured Format**: Extracts comprehensive data for AI matching (skills, experience requirements, work constraints)
+      - AI extracts all fields: job title, description summary, skills (required/nice-to-have), salary, location, experience years
       - AI extracts screening questions with ideal answers from qualification sections
+      - AI extracts work requirements: timezone, visa sponsorship, remote policy, work hours
       - Auto-fills job creation form with all parsed data
+      - Stores raw LinkedIn text, formatted HTML, and structured data in database
       - Maps must-have questions to required deliverables in evaluation pipeline
       - Maps preferred questions to optional deliverables in evaluation pipeline
-      - User can review and edit all parsed data before saving
-      - Stores screening questions in database for future reference
+      - **Security**: HTML sanitized with DOMPurify before rendering (XSS protection)
     - **Generate Description**: AI generates professional LinkedIn-style descriptions from job fields.
     - **Evaluation Pipeline Builder**: Fully configurable multi-level hiring workflow:
       - Add/remove/reorder evaluation levels (unlimited stages)
