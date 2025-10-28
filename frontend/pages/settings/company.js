@@ -17,6 +17,7 @@ export default function CompanyProfile() {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [viewMode, setViewMode] = useState(false)
+  const [cultureProfileComplete, setCultureProfileComplete] = useState(false)
   
   const [formData, setFormData] = useState({
     company_name: '',
@@ -30,6 +31,7 @@ export default function CompanyProfile() {
 
   useEffect(() => {
     fetchProfile()
+    fetchCultureStatus()
   }, [])
 
   const fetchProfile = async () => {
@@ -61,6 +63,19 @@ export default function CompanyProfile() {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchCultureStatus = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/company/culture`)
+      if (response.ok) {
+        setCultureProfileComplete(true)
+      } else {
+        setCultureProfileComplete(false)
+      }
+    } catch (err) {
+      setCultureProfileComplete(false)
     }
   }
 
@@ -272,6 +287,52 @@ export default function CompanyProfile() {
                     <p className="mt-2">Click "Edit Profile" above to add more details.</p>
                   </div>
                 )}
+
+                {/* Culture Survey Section */}
+                <div className="pt-6 border-t border-gray-200 mt-8">
+                  <h2 className="text-lg font-bold text-gray-900 mb-4">Company Culture Survey</h2>
+                  {cultureProfileComplete ? (
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl">✅</span>
+                          <div>
+                            <h3 className="text-lg font-bold text-green-900">Culture Profile Complete</h3>
+                            <p className="text-sm text-green-700 mt-1">
+                              You've completed the comprehensive culture survey
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => router.push('/settings/culture')}
+                          className="px-6 py-2 bg-white border-2 border-green-600 text-green-700 rounded-lg hover:bg-green-50 font-semibold transition-colors"
+                        >
+                          Edit Culture Survey
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300 rounded-lg p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl">📋</span>
+                          <div>
+                            <h3 className="text-lg font-bold text-orange-900">Culture Survey Pending</h3>
+                            <p className="text-sm text-orange-700 mt-1">
+                              Complete our 3-section survey to better match candidates with your culture
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => router.push('/settings/culture')}
+                          className="px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:from-orange-700 hover:to-red-700 font-bold shadow-lg transition-all"
+                        >
+                          📋 Complete Culture Survey
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
