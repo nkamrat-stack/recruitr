@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import datetime, date
 import json
 import logging
@@ -28,6 +28,8 @@ class JobCreate(BaseModel):
     visa_sponsorship_available: Optional[bool] = False
     start_date_needed: Optional[date] = None
     status: Optional[str] = "open"
+    company_profile_id: Optional[int] = None
+    evaluation_levels: Optional[List[Any]] = None
 
 
 class JobUpdate(BaseModel):
@@ -43,6 +45,8 @@ class JobUpdate(BaseModel):
     visa_sponsorship_available: Optional[bool] = None
     start_date_needed: Optional[date] = None
     status: Optional[str] = None
+    company_profile_id: Optional[int] = None
+    evaluation_levels: Optional[List[Any]] = None
 
 
 class JobResponse(BaseModel):
@@ -59,6 +63,8 @@ class JobResponse(BaseModel):
     visa_sponsorship_available: Optional[bool]
     start_date_needed: Optional[date]
     status: str
+    company_profile_id: Optional[int]
+    evaluation_levels: Optional[List[Any]]
     created_at: Optional[datetime]
     match_count: int = 0
 
@@ -71,13 +77,26 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
     """
     Create a new job posting.
     """
-    db_job = Job(**job.model_dump())
+    job_data = job.model_dump()
+    
+    # Convert evaluation_levels list to JSON string for database storage
+    if job_data.get('evaluation_levels') is not None:
+        job_data['evaluation_levels'] = json.dumps(job_data['evaluation_levels'])
+    
+    db_job = Job(**job_data)
     db.add(db_job)
     db.commit()
     db.refresh(db_job)
     
     job_dict = db_job.__dict__.copy()
     job_dict['match_count'] = 0
+    
+    # Convert evaluation_levels JSON string back to list for response
+    if job_dict.get('evaluation_levels'):
+        try:
+            job_dict['evaluation_levels'] = json.loads(job_dict['evaluation_levels'])
+        except (json.JSONDecodeError, TypeError):
+            job_dict['evaluation_levels'] = None
     
     return job_dict
 
@@ -111,6 +130,14 @@ def list_jobs(
     for job in jobs:
         job_dict = job.__dict__.copy()
         job_dict['match_count'] = match_dict.get(job.id, 0)
+        
+        # Convert evaluation_levels JSON string back to list
+        if job_dict.get('evaluation_levels'):
+            try:
+                job_dict['evaluation_levels'] = json.loads(job_dict['evaluation_levels'])
+            except (json.JSONDecodeError, TypeError):
+                job_dict['evaluation_levels'] = None
+        
         result.append(job_dict)
     
     return result
@@ -131,6 +158,13 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
     job_dict = job.__dict__.copy()
     job_dict['match_count'] = match_count
     
+    # Convert evaluation_levels JSON string back to list
+    if job_dict.get('evaluation_levels'):
+        try:
+            job_dict['evaluation_levels'] = json.loads(job_dict['evaluation_levels'])
+        except (json.JSONDecodeError, TypeError):
+            job_dict['evaluation_levels'] = None
+    
     return job_dict
 
 
@@ -145,6 +179,11 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail="Job not found")
     
     update_data = job_update.model_dump(exclude_unset=True)
+    
+    # Convert evaluation_levels list to JSON string for database storage
+    if 'evaluation_levels' in update_data and update_data['evaluation_levels'] is not None:
+        update_data['evaluation_levels'] = json.dumps(update_data['evaluation_levels'])
+    
     for key, value in update_data.items():
         setattr(job, key, value)
     
@@ -155,6 +194,13 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     
     job_dict = job.__dict__.copy()
     job_dict['match_count'] = match_count
+    
+    # Convert evaluation_levels JSON string back to list for response
+    if job_dict.get('evaluation_levels'):
+        try:
+            job_dict['evaluation_levels'] = json.loads(job_dict['evaluation_levels'])
+        except (json.JSONDecodeError, TypeError):
+            job_dict['evaluation_levels'] = None
     
     return job_dict
 
@@ -527,20 +573,20 @@ def match_candidates_to_job(job_id: int, db: Session = Depends(get_db)):
             ).first()
             
             if existing_match:
-                # Update existing match
-                existing_match.overall_score = ai_scores.get("overall_score", 0.0)
-                existing_match.skills_score = ai_scores.get("skills_score", 0.0)
-                existing_match.culture_score = ai_scores.get("culture_score", 0.0)
-                existing_match.communication_score = ai_scores.get("communication_score", 0.0)
-                existing_match.quality_score = ai_scores.get("quality_score", 0.0)
-                existing_match.potential_score = ai_scores.get("potential_score", 0.0)
-                existing_match.salary_compatible = salary_compatible
-                existing_match.hours_compatible = hours_compatible
-                existing_match.location_compatible = location_compatible
-                existing_match.visa_compatible = visa_compatible
-                existing_match.availability_compatible = availability_compatible
-                existing_match.evidence = ai_scores.get("evidence", "{}")
-                existing_match.ai_reasoning = ai_scores.get("ai_reasoning", "")
+                # Update existing match using setattr for proper SQLAlchemy instance mutation
+                setattr(existing_match, 'overall_score', ai_scores.get("overall_score", 0.0))
+                setattr(existing_match, 'skills_score', ai_scores.get("skills_score", 0.0))
+                setattr(existing_match, 'culture_score', ai_scores.get("culture_score", 0.0))
+                setattr(existing_match, 'communication_score', ai_scores.get("communication_score", 0.0))
+                setattr(existing_match, 'quality_score', ai_scores.get("quality_score", 0.0))
+                setattr(existing_match, 'potential_score', ai_scores.get("potential_score", 0.0))
+                setattr(existing_match, 'salary_compatible', salary_compatible)
+                setattr(existing_match, 'hours_compatible', hours_compatible)
+                setattr(existing_match, 'location_compatible', location_compatible)
+                setattr(existing_match, 'visa_compatible', visa_compatible)
+                setattr(existing_match, 'availability_compatible', availability_compatible)
+                setattr(existing_match, 'evidence', ai_scores.get("evidence", "{}"))
+                setattr(existing_match, 'ai_reasoning', ai_scores.get("ai_reasoning", ""))
                 match = existing_match
             else:
                 # Create new match

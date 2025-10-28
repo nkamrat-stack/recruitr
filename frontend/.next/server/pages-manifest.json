@@ -2,6 +2,8 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
+  "/jobs": "pages/jobs.js",
   "/": "pages/index.js",
-  "/settings/company": "pages/settings/company.js"
+  "/settings/company": "pages/settings/company.js",
+  "/candidates": "pages/candidates.js"
 }

@@ -1,0 +1,53 @@
+Enhance job creation to support fully configurable multi-level evaluation pipeline:
+
+BACKEND (app/routers/jobs.py and database.py):
+
+1. Update jobs table schema:
+   - Add company_profile_id (foreign key to company_profile)
+   - Add evaluation_levels (JSON text storing array of level configurations)
+
+2. Each level in the JSON should have:
+   - level_number (1, 2, 3, etc.)
+   - level_name (user enters: "Initial Screen", "Technical Review", etc.)
+   - required_deliverables (array of strings: ["resume", "loom_video", "custom_questionnaire"])
+   - optional_deliverables (array of strings)
+   - advance_count (integer or null if it's the final level)
+
+3. Update POST /jobs/ and PUT /jobs/{id} to accept evaluation_levels array
+
+FRONTEND (pages/jobs/index.js):
+
+1. Add "Evaluation Pipeline" section in job creation modal:
+   - Starts with 1 default level
+   - "+ Add Level" button (can add unlimited levels)
+   - Each level shows:
+     * Level number (auto-numbered: Level 1, Level 2, Level 3...)
+     * Level Name input (text: user defines name like "Initial Screen")
+     * Required Deliverables section:
+       - Preset checkboxes for common types:
+         □ Resume
+         □ Loom Video
+         □ Cover Letter
+         □ Questionnaire
+         □ Portfolio
+         □ GitHub
+         □ Code Sample
+         □ Interview Transcript
+       - "+ Add Custom Deliverable" button to add any other type
+       - Custom deliverable: text input for name
+     * Optional Deliverables (same interface as required)
+     * Advance Count input (number: "Top 50", "Top 10", or "All" for final level)
+     * "Remove Level" button (can't remove if only 1 level)
+     * Up/Down arrows to reorder levels
+
+2. Validation:
+   - At least 1 level required
+   - Each level must have at least 1 required deliverable
+   - Last level should have advance_count = null (final stage)
+
+3. Visual design:
+   - Each level in a collapsible card with level number badge
+   - Clear visual separation between levels
+   - Show level progression (Level 1 → Level 2 → Level 3)
+
+Make it intuitive - users should be able to build any hiring pipeline they want with any number of stages and any types of deliverables.

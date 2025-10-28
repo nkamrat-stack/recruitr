@@ -109,10 +109,13 @@ class Job(Base):
     visa_sponsorship_available = Column(Boolean)
     start_date_needed = Column(Date)
     status = Column(String, default='open')
+    company_profile_id = Column(Integer, ForeignKey("company_profile.id"))
+    evaluation_levels = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     matches = relationship("Match", back_populates="job")
     feedbacks = relationship("Feedback", back_populates="job")
+    company_profile = relationship("CompanyProfile")
 
 class Match(Base):
     __tablename__ = "matches"

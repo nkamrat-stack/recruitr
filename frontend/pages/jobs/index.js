@@ -36,6 +36,21 @@ export default function JobsList() {
     status: 'open',
   })
 
+  const [evaluationLevels, setEvaluationLevels] = useState([])
+  const [collapsedLevels, setCollapsedLevels] = useState({})
+  const [customDeliverableInputs, setCustomDeliverableInputs] = useState({})
+
+  const PRESET_DELIVERABLES = [
+    { id: 'resume', label: 'Resume' },
+    { id: 'loom_video', label: 'Loom Video' },
+    { id: 'cover_letter', label: 'Cover Letter' },
+    { id: 'questionnaire', label: 'Questionnaire' },
+    { id: 'portfolio', label: 'Portfolio' },
+    { id: 'github', label: 'GitHub' },
+    { id: 'code_sample', label: 'Code Sample' },
+    { id: 'interview_transcript', label: 'Interview Transcript' },
+  ]
+
   useEffect(() => {
     fetchJobs()
   }, [])
@@ -57,6 +72,11 @@ export default function JobsList() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    if (!validateEvaluationLevels()) {
+      return
+    }
+
     try {
       const payload = {
         ...formData,
@@ -64,6 +84,7 @@ export default function JobsList() {
         salary_max: formData.salary_max ? parseInt(formData.salary_max) : null,
         hours_required: parseInt(formData.hours_required),
         start_date_needed: formData.start_date_needed || null,
+        evaluation_levels: evaluationLevels,
       }
 
       const url = editingJob 
@@ -108,6 +129,21 @@ export default function JobsList() {
       start_date_needed: job.start_date_needed || '',
       status: job.status || 'open',
     })
+    
+    if (job.evaluation_levels && job.evaluation_levels.length > 0) {
+      setEvaluationLevels(job.evaluation_levels)
+    } else {
+      setEvaluationLevels([{
+        level_number: 1,
+        level_name: 'Initial Screen',
+        required_deliverables: ['resume'],
+        optional_deliverables: [],
+        advance_count: null,
+      }])
+    }
+    
+    setCollapsedLevels({})
+    setCustomDeliverableInputs({})
     setShowModal(true)
   }
 
@@ -142,11 +178,21 @@ export default function JobsList() {
       start_date_needed: '',
       status: 'open',
     })
+    setEvaluationLevels([])
+    setCollapsedLevels({})
+    setCustomDeliverableInputs({})
   }
 
   const openCreateModal = () => {
     setEditingJob(null)
     resetForm()
+    setEvaluationLevels([{
+      level_number: 1,
+      level_name: 'Initial Screen',
+      required_deliverables: ['resume'],
+      optional_deliverables: [],
+      advance_count: null,
+    }])
     setShowModal(true)
   }
 
@@ -246,6 +292,164 @@ export default function JobsList() {
     return status === 'open'
       ? 'bg-green-100 text-green-800'
       : 'bg-gray-100 text-gray-800'
+  }
+
+  const addEvaluationLevel = () => {
+    const newLevel = {
+      level_number: evaluationLevels.length + 1,
+      level_name: `Level ${evaluationLevels.length + 1}`,
+      required_deliverables: [],
+      optional_deliverables: [],
+      advance_count: null,
+    }
+    setEvaluationLevels([...evaluationLevels, newLevel])
+  }
+
+  const removeEvaluationLevel = (levelNumber) => {
+    if (evaluationLevels.length <= 1) {
+      alert('At least one evaluation level is required')
+      return
+    }
+    const updatedLevels = evaluationLevels
+      .filter(level => level.level_number !== levelNumber)
+      .map((level, index) => ({
+        ...level,
+        level_number: index + 1,
+      }))
+    setEvaluationLevels(updatedLevels)
+  }
+
+  const moveLevelUp = (levelNumber) => {
+    if (levelNumber === 1) return
+    const updatedLevels = [...evaluationLevels]
+    const currentIndex = levelNumber - 1
+    const previousIndex = currentIndex - 1
+    const temp = updatedLevels[currentIndex]
+    updatedLevels[currentIndex] = { ...updatedLevels[previousIndex], level_number: levelNumber }
+    updatedLevels[previousIndex] = { ...temp, level_number: levelNumber - 1 }
+    setEvaluationLevels(updatedLevels)
+  }
+
+  const moveLevelDown = (levelNumber) => {
+    if (levelNumber === evaluationLevels.length) return
+    const updatedLevels = [...evaluationLevels]
+    const currentIndex = levelNumber - 1
+    const nextIndex = currentIndex + 1
+    const temp = updatedLevels[currentIndex]
+    updatedLevels[currentIndex] = { ...updatedLevels[nextIndex], level_number: levelNumber }
+    updatedLevels[nextIndex] = { ...temp, level_number: levelNumber + 1 }
+    setEvaluationLevels(updatedLevels)
+  }
+
+  const togglePresetDeliverable = (levelNumber, deliverableId, isRequired) => {
+    const updatedLevels = evaluationLevels.map(level => {
+      if (level.level_number !== levelNumber) return level
+      
+      const targetArray = isRequired ? 'required_deliverables' : 'optional_deliverables'
+      const otherArray = isRequired ? 'optional_deliverables' : 'required_deliverables'
+      
+      const currentArray = level[targetArray] || []
+      const otherCurrentArray = level[otherArray] || []
+      
+      if (currentArray.includes(deliverableId)) {
+        return {
+          ...level,
+          [targetArray]: currentArray.filter(id => id !== deliverableId),
+        }
+      } else {
+        return {
+          ...level,
+          [targetArray]: [...currentArray, deliverableId],
+          [otherArray]: otherCurrentArray.filter(id => id !== deliverableId),
+        }
+      }
+    })
+    setEvaluationLevels(updatedLevels)
+  }
+
+  const addCustomDeliverable = (levelNumber, isRequired) => {
+    const inputKey = `${levelNumber}-${isRequired ? 'required' : 'optional'}`
+    const customValue = customDeliverableInputs[inputKey]
+    
+    if (!customValue || !customValue.trim()) {
+      alert('Please enter a deliverable name')
+      return
+    }
+
+    const updatedLevels = evaluationLevels.map(level => {
+      if (level.level_number !== levelNumber) return level
+      
+      const targetArray = isRequired ? 'required_deliverables' : 'optional_deliverables'
+      const currentArray = level[targetArray] || []
+      
+      return {
+        ...level,
+        [targetArray]: [...currentArray, `custom:${customValue.trim()}`],
+      }
+    })
+    
+    setEvaluationLevels(updatedLevels)
+    setCustomDeliverableInputs({ ...customDeliverableInputs, [inputKey]: '' })
+  }
+
+  const removeDeliverable = (levelNumber, deliverableId, isRequired) => {
+    const updatedLevels = evaluationLevels.map(level => {
+      if (level.level_number !== levelNumber) return level
+      
+      const targetArray = isRequired ? 'required_deliverables' : 'optional_deliverables'
+      const currentArray = level[targetArray] || []
+      
+      return {
+        ...level,
+        [targetArray]: currentArray.filter(id => id !== deliverableId),
+      }
+    })
+    setEvaluationLevels(updatedLevels)
+  }
+
+  const updateAdvanceCount = (levelNumber, value) => {
+    const updatedLevels = evaluationLevels.map(level => {
+      if (level.level_number !== levelNumber) return level
+      return {
+        ...level,
+        advance_count: value === '' || value === null ? null : parseInt(value),
+      }
+    })
+    setEvaluationLevels(updatedLevels)
+  }
+
+  const updateLevelName = (levelNumber, name) => {
+    const updatedLevels = evaluationLevels.map(level => {
+      if (level.level_number !== levelNumber) return level
+      return {
+        ...level,
+        level_name: name,
+      }
+    })
+    setEvaluationLevels(updatedLevels)
+  }
+
+  const toggleLevelCollapsed = (levelNumber) => {
+    setCollapsedLevels({
+      ...collapsedLevels,
+      [levelNumber]: !collapsedLevels[levelNumber],
+    })
+  }
+
+  const validateEvaluationLevels = () => {
+    if (evaluationLevels.length === 0) {
+      alert('At least one evaluation level is required')
+      return false
+    }
+
+    for (const level of evaluationLevels) {
+      if (!level.required_deliverables || level.required_deliverables.length === 0) {
+        alert(`Level ${level.level_number} must have at least one required deliverable`)
+        return false
+      }
+    }
+
+    return true
   }
 
   if (loading) {
@@ -587,6 +791,218 @@ export default function JobsList() {
                     <option value="open">Open</option>
                     <option value="closed">Closed</option>
                   </select>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-300 pt-6 mt-6">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Evaluation Pipeline</h3>
+                    <p className="text-sm text-gray-600">Define the stages candidates will go through</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {evaluationLevels.map((level, index) => {
+                    const isCollapsed = collapsedLevels[level.level_number]
+                    const isLastLevel = index === evaluationLevels.length - 1
+                    
+                    return (
+                      <div key={level.level_number} className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 flex justify-between items-center border-b border-gray-300">
+                          <div className="flex items-center gap-3">
+                            <span className="bg-blue-600 text-white font-bold px-3 py-1 rounded-full text-sm">
+                              {level.level_number}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => toggleLevelCollapsed(level.level_number)}
+                              className="text-gray-700 hover:text-gray-900"
+                            >
+                              {isCollapsed ? '▶' : '▼'}
+                            </button>
+                            <input
+                              type="text"
+                              value={level.level_name}
+                              onChange={(e) => updateLevelName(level.level_number, e.target.value)}
+                              className="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 bg-white"
+                              placeholder="Level name"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {evaluationLevels.length > 1 && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => moveLevelUp(level.level_number)}
+                                  disabled={level.level_number === 1}
+                                  className="px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Move up"
+                                >
+                                  ↑
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveLevelDown(level.level_number)}
+                                  disabled={level.level_number === evaluationLevels.length}
+                                  className="px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Move down"
+                                >
+                                  ↓
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeEvaluationLevel(level.level_number)}
+                                  className="px-3 py-1 bg-red-50 text-red-600 border border-red-300 rounded hover:bg-red-100"
+                                  title="Remove level"
+                                >
+                                  Remove
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {!isCollapsed && (
+                          <div className="p-4 bg-white space-y-4">
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Required Deliverables *
+                              </label>
+                              <div className="grid grid-cols-2 gap-2 mb-3">
+                                {PRESET_DELIVERABLES.map(preset => (
+                                  <label key={preset.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                    <input
+                                      type="checkbox"
+                                      checked={level.required_deliverables?.includes(preset.id) || false}
+                                      onChange={() => togglePresetDeliverable(level.level_number, preset.id, true)}
+                                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-gray-700">{preset.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                              
+                              {level.required_deliverables?.filter(d => d.startsWith('custom:')).map(customDeliverable => (
+                                <div key={customDeliverable} className="flex items-center gap-2 bg-blue-50 p-2 rounded mb-2">
+                                  <span className="text-sm text-gray-700 flex-1">
+                                    {customDeliverable.replace('custom:', '')}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeDeliverable(level.level_number, customDeliverable, true)}
+                                    className="text-red-600 hover:text-red-800 text-xs"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              ))}
+
+                              <div className="flex gap-2 mt-2">
+                                <input
+                                  type="text"
+                                  value={customDeliverableInputs[`${level.level_number}-required`] || ''}
+                                  onChange={(e) => setCustomDeliverableInputs({
+                                    ...customDeliverableInputs,
+                                    [`${level.level_number}-required`]: e.target.value
+                                  })}
+                                  className="flex-1 px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-sm"
+                                  placeholder="Custom deliverable name"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => addCustomDeliverable(level.level_number, true)}
+                                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                                >
+                                  + Add Custom
+                                </button>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Optional Deliverables
+                              </label>
+                              <div className="grid grid-cols-2 gap-2 mb-3">
+                                {PRESET_DELIVERABLES.map(preset => (
+                                  <label key={preset.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                    <input
+                                      type="checkbox"
+                                      checked={level.optional_deliverables?.includes(preset.id) || false}
+                                      onChange={() => togglePresetDeliverable(level.level_number, preset.id, false)}
+                                      className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                                    />
+                                    <span className="text-sm text-gray-700">{preset.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                              
+                              {level.optional_deliverables?.filter(d => d.startsWith('custom:')).map(customDeliverable => (
+                                <div key={customDeliverable} className="flex items-center gap-2 bg-purple-50 p-2 rounded mb-2">
+                                  <span className="text-sm text-gray-700 flex-1">
+                                    {customDeliverable.replace('custom:', '')}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeDeliverable(level.level_number, customDeliverable, false)}
+                                    className="text-red-600 hover:text-red-800 text-xs"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              ))}
+
+                              <div className="flex gap-2 mt-2">
+                                <input
+                                  type="text"
+                                  value={customDeliverableInputs[`${level.level_number}-optional`] || ''}
+                                  onChange={(e) => setCustomDeliverableInputs({
+                                    ...customDeliverableInputs,
+                                    [`${level.level_number}-optional`]: e.target.value
+                                  })}
+                                  className="flex-1 px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 text-sm"
+                                  placeholder="Custom deliverable name"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => addCustomDeliverable(level.level_number, false)}
+                                  className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm"
+                                >
+                                  + Add Custom
+                                </button>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                {isLastLevel ? 'Advance Count (All for final level)' : 'Number to Advance'}
+                              </label>
+                              <input
+                                type="number"
+                                value={level.advance_count === null ? '' : level.advance_count}
+                                onChange={(e) => updateAdvanceCount(level.level_number, e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                placeholder={isLastLevel ? "Leave empty for 'All'" : "Number of candidates to advance"}
+                              />
+                              {isLastLevel && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Leave empty to advance all remaining candidates
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={addEvaluationLevel}
+                    className="w-full py-3 border-2 border-dashed border-blue-400 text-blue-600 rounded-lg hover:border-blue-600 hover:bg-blue-50 font-semibold transition"
+                  >
+                    + Add Level
+                  </button>
                 </div>
               </div>
 

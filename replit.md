@@ -21,11 +21,15 @@ Do not make changes to the file `Y`.
   - **Schema**: `candidates`, `candidate_artifacts`, `candidate_profiles`, `jobs`, `matches`, `feedback`, `company_profile`.
 - **API Endpoints**:
   - **Candidates**: CRUD operations, artifact management, AI profile generation and retrieval.
-  - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools, candidate matching.
+  - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools, candidate matching, multi-level evaluation pipelines.
     - `POST /jobs/parse-description`: Parse LinkedIn job descriptions and extract structured fields using AI.
     - `POST /jobs/generate-description`: Generate professional job descriptions from job fields using AI.
     - `GET /jobs/{job_id}/matches`: Retrieve existing candidate matches for a job.
     - `POST /jobs/{job_id}/match`: Match all candidates with AI profiles to a job, scoring and ranking them.
+    - **Evaluation Pipeline**: Jobs include configurable multi-level evaluation workflows stored as JSON in `evaluation_levels` field.
+      - Each level specifies: level_number, level_name, required_deliverables, optional_deliverables, advance_count.
+      - Supports unlimited levels with customizable deliverable requirements at each stage.
+      - Company profile linkage via `company_profile_id` foreign key.
   - **Company Profile**: Manage company information and culture.
     - `GET /company/profile`: Retrieve company profile (404 if none exists).
     - `POST /company/profile`: Create or update company profile (upserts single profile).
@@ -42,6 +46,13 @@ Do not make changes to the file `Y`.
   - **Jobs List (`/jobs`)**: Manages job postings with AI-powered creation tools:
     - **Import from LinkedIn**: Paste job descriptions from LinkedIn or any source, AI extracts all fields automatically.
     - **Generate Description**: AI generates professional LinkedIn-style descriptions from job fields.
+    - **Evaluation Pipeline Builder**: Fully configurable multi-level hiring workflow:
+      - Add/remove/reorder evaluation levels (unlimited stages)
+      - Configure required and optional deliverables for each level (preset options + custom)
+      - Preset deliverables: Resume, Loom Video, Cover Letter, Questionnaire, Portfolio, GitHub, Code Sample, Interview Transcript
+      - Set advance count (number of candidates advancing to next level, or "All" for final stage)
+      - Collapsible level cards with intuitive controls and validation
+      - Visual level progression display
     - Standard CRUD operations: create, edit, delete job postings.
   - **Job Matches (`/jobs/[id]/matches`)**: Displays ranked candidates for a specific job:
     - Fetches existing matches (fast) or regenerates with AI (on-demand).
