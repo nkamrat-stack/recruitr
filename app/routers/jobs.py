@@ -380,6 +380,66 @@ def extract_job_requirements(job_id: int, db: Session = Depends(get_db)):
         )
 
 
+class WeightUpdateRequest(BaseModel):
+    required_qualifications: Optional[List[Dict[str, Any]]] = None
+    preferred_qualifications: Optional[List[Dict[str, Any]]] = None
+    competencies: Optional[List[Dict[str, Any]]] = None
+
+
+@router.put("/{job_id}/update-weights")
+def update_job_weights(job_id: int, weight_update: WeightUpdateRequest, db: Session = Depends(get_db)):
+    """
+    Update weights and importance values for qualifications and competencies.
+    Marks updated items as manually_set = true.
+    """
+    job = db.query(Job).filter(Job.id == job_id).first()
+    
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    try:
+        # Update required qualifications if provided
+        if weight_update.required_qualifications is not None:
+            # Mark all as manually set
+            for qual in weight_update.required_qualifications:
+                qual['manually_set'] = True
+            job.required_qualifications = json.dumps(weight_update.required_qualifications)
+        
+        # Update preferred qualifications if provided
+        if weight_update.preferred_qualifications is not None:
+            for qual in weight_update.preferred_qualifications:
+                qual['manually_set'] = True
+            job.preferred_qualifications = json.dumps(weight_update.preferred_qualifications)
+        
+        # Update competencies if provided
+        if weight_update.competencies is not None:
+            for comp in weight_update.competencies:
+                comp['manually_set'] = True
+            job.competencies = json.dumps(weight_update.competencies)
+        
+        db.commit()
+        db.refresh(job)
+        
+        # Return updated job
+        match_count = db.query(Match).filter(Match.job_id == job_id).count()
+        job_dict = job.__dict__.copy()
+        job_dict['match_count'] = match_count
+        deserialize_job_json_fields(job_dict)
+        
+        return {
+            "message": "Weights updated successfully",
+            "job": job_dict
+        }
+    
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to update weights for job {job_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update weights: {str(e)}"
+        )
+
+
 class ParseLinkedInRequest(BaseModel):
     linkedin_text: str
 
