@@ -99,6 +99,8 @@ class Job(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     description = Column(Text)
+    linkedin_original_text = Column(Text)
+    display_description = Column(Text)
     required_skills = Column(Text)
     nice_to_have_skills = Column(Text)
     culture_requirements = Column(Text)

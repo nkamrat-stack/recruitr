@@ -18,6 +18,8 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 class JobCreate(BaseModel):
     title: str
     description: Optional[str] = None
+    linkedin_original_text: Optional[str] = None
+    display_description: Optional[str] = None
     required_skills: Optional[str] = None
     nice_to_have_skills: Optional[str] = None
     culture_requirements: Optional[str] = None
@@ -36,6 +38,8 @@ class JobCreate(BaseModel):
 class JobUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    linkedin_original_text: Optional[str] = None
+    display_description: Optional[str] = None
     required_skills: Optional[str] = None
     nice_to_have_skills: Optional[str] = None
     culture_requirements: Optional[str] = None
@@ -55,6 +59,8 @@ class JobResponse(BaseModel):
     id: int
     title: str
     description: Optional[str]
+    linkedin_original_text: Optional[str]
+    display_description: Optional[str]
     required_skills: Optional[str]
     nice_to_have_skills: Optional[str]
     culture_requirements: Optional[str]
@@ -265,6 +271,7 @@ class ParseLinkedInRequest(BaseModel):
 
 
 class ParseLinkedInResponse(BaseModel):
+    display_html: str
     job_title: str
     description: str
     required_skills: List[str]
@@ -272,6 +279,9 @@ class ParseLinkedInResponse(BaseModel):
     salary_min: Optional[int] = None
     salary_max: Optional[int] = None
     location: Optional[str] = None
+    experience_min_years: Optional[int] = None
+    experience_max_years: Optional[int] = None
+    work_requirements: Dict[str, Any] = {}
     must_have_questions: List[Dict[str, str]]
     preferred_questions: List[Dict[str, str]]
 

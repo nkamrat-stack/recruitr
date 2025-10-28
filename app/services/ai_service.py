@@ -257,20 +257,26 @@ Ensure all scores are between 0 and 1. Base years_experience on evidence in the 
 
 def parse_linkedin_job(linkedin_text: str) -> Dict[str, Any]:
     """
-    Parses a LinkedIn job post and extracts structured data including screening questions.
+    Parses a LinkedIn job post and extracts DUAL formats:
+    1. display_html - Preserves original formatting with HTML for display
+    2. structured_data - Extracts all fields, requirements, and screening questions
     
     Args:
         linkedin_text: Raw text from LinkedIn job posting
     
     Returns:
         Dictionary containing:
+            - display_html: HTML-formatted version preserving original structure
             - job_title: String
-            - description: String
+            - description: AI-generated summary for quick reference
             - required_skills: List of strings
             - nice_to_have_skills: List of strings
             - salary_min: Optional int
             - salary_max: Optional int
             - location: Optional string
+            - experience_min_years: Optional int
+            - experience_max_years: Optional int
+            - work_requirements: Dict with timezone, visa, remote_ok, etc.
             - must_have_questions: List of {question: str, ideal_answer: str}
             - preferred_questions: List of {question: str, ideal_answer: str}
     """
@@ -278,6 +284,7 @@ def parse_linkedin_job(linkedin_text: str) -> Dict[str, Any]:
     if not client:
         logger.error("Cannot parse LinkedIn job: OpenAI client not available")
         return {
+            "display_html": "",
             "job_title": "",
             "description": "",
             "required_skills": [],
@@ -285,56 +292,79 @@ def parse_linkedin_job(linkedin_text: str) -> Dict[str, Any]:
             "salary_min": None,
             "salary_max": None,
             "location": None,
+            "experience_min_years": None,
+            "experience_max_years": None,
+            "work_requirements": {},
             "must_have_questions": [],
             "preferred_questions": []
         }
     
-    prompt = f"""Parse this LinkedIn job post and extract all relevant information.
+    prompt = f"""Extract this LinkedIn job post in TWO formats:
 
 LinkedIn Job Text:
 {linkedin_text[:12000]}
 
-Extract and structure the following information:
-1. job_title - The position title
-2. description - Clean job description (remove company branding fluff, keep core responsibilities and requirements)
-3. required_skills - Array of must-have technical and soft skills
-4. nice_to_have_skills - Array of preferred/bonus skills
-5. salary_min and salary_max - If salary range is mentioned (annual USD, null if not mentioned)
-6. location - Location info (Remote/Hybrid/City, null if not mentioned)
-7. must_have_questions - Extract screening questions labeled as "must-have" or "required" with their ideal answers
-8. preferred_questions - Extract screening questions labeled as "preferred" or "nice-to-have" with their ideal answers
+OUTPUT FORMAT 1 - display_html:
+Preserve the EXACT original formatting using HTML tags. Keep:
+- All sections exactly as they appear (About Us, Job Description, Requirements, Qualifications, etc.)
+- All bullet points using <ul> and <li> tags
+- All numbered lists using <ol> and <li> tags
+- Bold text using <strong> tags
+- Headings using <h2> or <h3> tags
+- Paragraphs using <p> tags
+The goal: Make it look identical to how it appeared on LinkedIn.
 
-For screening questions, look for sections like:
-- "Must-have Qualifications"
-- "Required Qualifications"
-- "Preferred Qualifications"
-- "Nice-to-have"
-- "Screening Questions"
+OUTPUT FORMAT 2 - structured_data:
+Extract comprehensive structured information for AI matching:
 
-Each question object should have:
-- question: The actual question text
-- ideal_answer: The expected/ideal answer or qualification
+1. job_title - Position title
+2. description - AI-generated 2-3 sentence summary for quick reference
+3. required_skills - Array of must-have technical skills
+4. nice_to_have_skills - Array of preferred skills
+5. salary_min and salary_max - Annual USD (null if not mentioned)
+6. location - Location info (null if not mentioned)
+7. experience_min_years and experience_max_years - Years of experience required (null if not mentioned)
+8. work_requirements - Extract:
+   - timezone: Timezone requirements if mentioned
+   - visa_sponsorship: true/false if mentioned
+   - remote_ok: true/false/hybrid
+   - work_hours: Any specific hour requirements
+9. must_have_questions - Screening questions from "Required/Must-have Qualifications" sections
+10. preferred_questions - Screening questions from "Preferred/Nice-to-have" sections
 
-Return a JSON object with this exact structure:
+Each question should have:
+- question: The actual question or requirement
+- ideal_answer: Expected qualification or answer
+
+Return a JSON object with this structure:
 {{
+  "display_html": "<h2>About the Company</h2><p>We are...</p><h2>Job Description</h2><ul><li>Build scalable systems</li><li>Lead technical initiatives</li></ul><h2>Requirements</h2><ul><li>5+ years Python</li><li>React experience</li></ul>",
   "job_title": "Senior Full-Stack Engineer",
-  "description": "We are seeking a talented engineer to...",
+  "description": "Seeking a talented engineer to build scalable web applications using Python and React.",
   "required_skills": ["Python", "React", "PostgreSQL", "AWS"],
   "nice_to_have_skills": ["Docker", "Kubernetes", "GraphQL"],
   "salary_min": 120000,
   "salary_max": 180000,
   "location": "Remote",
+  "experience_min_years": 5,
+  "experience_max_years": 10,
+  "work_requirements": {{
+    "timezone": "US Eastern Time",
+    "visa_sponsorship": false,
+    "remote_ok": true,
+    "work_hours": "Flexible"
+  }},
   "must_have_questions": [
     {{"question": "How many years of Python experience do you have?", "ideal_answer": "5+ years"}},
     {{"question": "Have you built production React applications?", "ideal_answer": "Yes, multiple applications"}}
   ],
   "preferred_questions": [
-    {{"question": "Do you have experience with Docker?", "ideal_answer": "Yes, used in production"}},
+    {{"question": "Do you have Docker experience?", "ideal_answer": "Yes, used in production"}},
     {{"question": "Familiar with GraphQL?", "ideal_answer": "Yes, built GraphQL APIs"}}
   ]
 }}
 
-Be robust - handle different LinkedIn formats, missing sections, and varying question styles."""
+Be robust - handle different formats and missing sections gracefully."""
 
     try:
         response = client.chat.completions.create(
@@ -344,7 +374,7 @@ Be robust - handle different LinkedIn formats, missing sections, and varying que
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an expert recruiter parsing LinkedIn job posts. Extract all relevant information and screening questions. Always return valid JSON."
+                    "content": "You are an expert recruiter parsing LinkedIn job posts. Extract both display-formatted HTML and comprehensive structured data. Always return valid JSON."
                 },
                 {
                     "role": "user",
@@ -364,6 +394,7 @@ Be robust - handle different LinkedIn formats, missing sections, and varying que
     except Exception as e:
         logger.error(f"Error parsing LinkedIn job: {str(e)}")
         return {
+            "display_html": "",
             "job_title": "",
             "description": "",
             "required_skills": [],
@@ -371,6 +402,9 @@ Be robust - handle different LinkedIn formats, missing sections, and varying que
             "salary_min": None,
             "salary_max": None,
             "location": None,
+            "experience_min_years": None,
+            "experience_max_years": None,
+            "work_requirements": {},
             "must_have_questions": [],
             "preferred_questions": []
         }

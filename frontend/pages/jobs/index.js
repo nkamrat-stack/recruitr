@@ -24,6 +24,8 @@ export default function JobsList() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    linkedin_original_text: '',
+    display_description: '',
     required_skills: '',
     nice_to_have_skills: '',
     culture_requirements: '',
@@ -120,6 +122,8 @@ export default function JobsList() {
     setFormData({
       title: job.title || '',
       description: job.description || '',
+      linkedin_original_text: job.linkedin_original_text || '',
+      display_description: job.display_description || '',
       required_skills: job.required_skills || '',
       nice_to_have_skills: job.nice_to_have_skills || '',
       culture_requirements: job.culture_requirements || '',
@@ -175,6 +179,8 @@ export default function JobsList() {
     setFormData({
       title: '',
       description: '',
+      linkedin_original_text: '',
+      display_description: '',
       required_skills: '',
       nice_to_have_skills: '',
       culture_requirements: '',
@@ -229,6 +235,8 @@ export default function JobsList() {
       setFormData({
         title: parsed.job_title || '',
         description: parsed.description || '',
+        linkedin_original_text: linkedinText,
+        display_description: parsed.display_html || '',
         required_skills: Array.isArray(parsed.required_skills) ? parsed.required_skills.join(', ') : '',
         nice_to_have_skills: Array.isArray(parsed.nice_to_have_skills) ? parsed.nice_to_have_skills.join(', ') : '',
         culture_requirements: '',
@@ -236,7 +244,7 @@ export default function JobsList() {
         salary_max: parsed.salary_max || '',
         hours_required: 40,
         location: parsed.location || '',
-        visa_sponsorship_available: false,
+        visa_sponsorship_available: parsed.work_requirements?.visa_sponsorship || false,
         start_date_needed: '',
         status: 'open',
       })
