@@ -111,6 +111,7 @@ class Job(Base):
     status = Column(String, default='open')
     company_profile_id = Column(Integer, ForeignKey("company_profile.id"))
     evaluation_levels = Column(Text)
+    screening_questions = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     matches = relationship("Match", back_populates="job")

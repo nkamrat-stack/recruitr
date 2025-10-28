@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from datetime import datetime, date
 import json
 import logging
 
 from database import get_db, Job, Match, Candidate, CandidateProfile, CandidateArtifact
-from app.services.ai_service import get_openai_client, score_candidate_for_job
+from app.services.ai_service import get_openai_client, score_candidate_for_job, parse_linkedin_job
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ class JobCreate(BaseModel):
     status: Optional[str] = "open"
     company_profile_id: Optional[int] = None
     evaluation_levels: Optional[List[Any]] = None
+    screening_questions: Optional[List[Any]] = None
 
 
 class JobUpdate(BaseModel):
@@ -47,6 +48,7 @@ class JobUpdate(BaseModel):
     status: Optional[str] = None
     company_profile_id: Optional[int] = None
     evaluation_levels: Optional[List[Any]] = None
+    screening_questions: Optional[List[Any]] = None
 
 
 class JobResponse(BaseModel):
@@ -65,6 +67,7 @@ class JobResponse(BaseModel):
     status: str
     company_profile_id: Optional[int]
     evaluation_levels: Optional[List[Any]]
+    screening_questions: Optional[List[Any]]
     created_at: Optional[datetime]
     match_count: int = 0
 
@@ -83,6 +86,10 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
     if job_data.get('evaluation_levels') is not None:
         job_data['evaluation_levels'] = json.dumps(job_data['evaluation_levels'])
     
+    # Convert screening_questions list to JSON string for database storage
+    if job_data.get('screening_questions') is not None:
+        job_data['screening_questions'] = json.dumps(job_data['screening_questions'])
+    
     db_job = Job(**job_data)
     db.add(db_job)
     db.commit()
@@ -97,6 +104,13 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
             job_dict['evaluation_levels'] = json.loads(job_dict['evaluation_levels'])
         except (json.JSONDecodeError, TypeError):
             job_dict['evaluation_levels'] = None
+    
+    # Convert screening_questions JSON string back to list for response
+    if job_dict.get('screening_questions'):
+        try:
+            job_dict['screening_questions'] = json.loads(job_dict['screening_questions'])
+        except (json.JSONDecodeError, TypeError):
+            job_dict['screening_questions'] = None
     
     return job_dict
 
@@ -138,6 +152,13 @@ def list_jobs(
             except (json.JSONDecodeError, TypeError):
                 job_dict['evaluation_levels'] = None
         
+        # Convert screening_questions JSON string back to list
+        if job_dict.get('screening_questions'):
+            try:
+                job_dict['screening_questions'] = json.loads(job_dict['screening_questions'])
+            except (json.JSONDecodeError, TypeError):
+                job_dict['screening_questions'] = None
+        
         result.append(job_dict)
     
     return result
@@ -165,6 +186,13 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
         except (json.JSONDecodeError, TypeError):
             job_dict['evaluation_levels'] = None
     
+    # Convert screening_questions JSON string back to list
+    if job_dict.get('screening_questions'):
+        try:
+            job_dict['screening_questions'] = json.loads(job_dict['screening_questions'])
+        except (json.JSONDecodeError, TypeError):
+            job_dict['screening_questions'] = None
+    
     return job_dict
 
 
@@ -184,6 +212,10 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     if 'evaluation_levels' in update_data and update_data['evaluation_levels'] is not None:
         update_data['evaluation_levels'] = json.dumps(update_data['evaluation_levels'])
     
+    # Convert screening_questions list to JSON string for database storage
+    if 'screening_questions' in update_data and update_data['screening_questions'] is not None:
+        update_data['screening_questions'] = json.dumps(update_data['screening_questions'])
+    
     for key, value in update_data.items():
         setattr(job, key, value)
     
@@ -202,6 +234,13 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
         except (json.JSONDecodeError, TypeError):
             job_dict['evaluation_levels'] = None
     
+    # Convert screening_questions JSON string back to list for response
+    if job_dict.get('screening_questions'):
+        try:
+            job_dict['screening_questions'] = json.loads(job_dict['screening_questions'])
+        except (json.JSONDecodeError, TypeError):
+            job_dict['screening_questions'] = None
+    
     return job_dict
 
 
@@ -219,6 +258,41 @@ def delete_job(job_id: int, db: Session = Depends(get_db)):
     db.commit()
     
     return {"message": "Job deleted successfully"}
+
+
+class ParseLinkedInRequest(BaseModel):
+    linkedin_text: str
+
+
+class ParseLinkedInResponse(BaseModel):
+    job_title: str
+    description: str
+    required_skills: List[str]
+    nice_to_have_skills: List[str]
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    location: Optional[str] = None
+    must_have_questions: List[Dict[str, str]]
+    preferred_questions: List[Dict[str, str]]
+
+
+@router.post("/parse-linkedin", response_model=ParseLinkedInResponse)
+def parse_linkedin_job_post(request: ParseLinkedInRequest):
+    """
+    Parse a LinkedIn job post and extract structured data including screening questions.
+    Uses AI to extract job fields and screening questions with ideal answers.
+    """
+    result = parse_linkedin_job(request.linkedin_text)
+    
+    if not result or not result.get("job_title"):
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to parse LinkedIn job post. Please ensure the text contains a complete job posting."
+        )
+    
+    logger.info(f"Successfully parsed LinkedIn job: {result.get('job_title')}")
+    
+    return ParseLinkedInResponse(**result)
 
 
 class ParseDescriptionRequest(BaseModel):

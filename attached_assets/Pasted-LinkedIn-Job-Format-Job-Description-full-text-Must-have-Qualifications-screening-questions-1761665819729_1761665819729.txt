@@ -1,0 +1,62 @@
+LinkedIn Job Format:
+├─ Job Description (full text)
+├─ Must-have Qualifications (screening questions + ideal answers)
+└─ Preferred Qualifications (screening questions + ideal answers)
+
+Convert to:
+├─ Job title, description, skills
+├─ Screening questions for Level 1
+└─ Evaluation pipeline requirements
+```
+
+---
+
+**📋 YOUR ACTION:**
+
+Tell Replit Agent:
+```
+Add "Import from LinkedIn" feature to job creation:
+
+BACKEND (app/routers/jobs.py):
+
+1. Create new endpoint: POST /jobs/parse-linkedin
+   - Accepts: { "linkedin_text": "full pasted job text" }
+   - Uses ai_service to extract:
+     * job_title
+     * description
+     * required_skills (array)
+     * nice_to_have_skills (array)
+     * salary_min, salary_max (if mentioned)
+     * location (if mentioned)
+     * must_have_questions (array of { question, ideal_answer })
+     * preferred_questions (array of { question, ideal_answer })
+   - Returns JSON with all extracted fields
+   - Use GPT-4o-mini with JSON mode for structured extraction
+
+2. Add function in ai_service.py: parse_linkedin_job(text) -> dict
+   - Prompt should identify job sections
+   - Extract qualification questions and ideal answers
+   - Return structured data
+
+FRONTEND (pages/jobs/index.js):
+
+1. Add "Import from LinkedIn" button at top of job creation modal
+   - When clicked, shows textarea modal: "Paste LinkedIn job post"
+   - Submit button: "Parse Job"
+   - Calls POST /jobs/parse-linkedin
+
+2. After parsing:
+   - Auto-fill all job form fields
+   - Convert must-have questions to Level 1 required deliverables
+   - Convert preferred questions to Level 1 optional deliverables
+   - Show parsed data in form for user review/edit
+   - User can adjust before saving
+
+3. UI flow:
+   - Click "Create Job" → Shows two options:
+     [Import from LinkedIn] [Create Manually]
+   - If Import: Paste → Parse → Review → Save
+   - If Manual: Fill form → Save
+
+Make the AI parsing robust - handle different LinkedIn formats.
+Store screening questions in a new field on jobs table: screening_questions (JSON).

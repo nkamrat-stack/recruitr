@@ -255,6 +255,127 @@ Ensure all scores are between 0 and 1. Base years_experience on evidence in the 
         }
 
 
+def parse_linkedin_job(linkedin_text: str) -> Dict[str, Any]:
+    """
+    Parses a LinkedIn job post and extracts structured data including screening questions.
+    
+    Args:
+        linkedin_text: Raw text from LinkedIn job posting
+    
+    Returns:
+        Dictionary containing:
+            - job_title: String
+            - description: String
+            - required_skills: List of strings
+            - nice_to_have_skills: List of strings
+            - salary_min: Optional int
+            - salary_max: Optional int
+            - location: Optional string
+            - must_have_questions: List of {question: str, ideal_answer: str}
+            - preferred_questions: List of {question: str, ideal_answer: str}
+    """
+    client = get_openai_client()
+    if not client:
+        logger.error("Cannot parse LinkedIn job: OpenAI client not available")
+        return {
+            "job_title": "",
+            "description": "",
+            "required_skills": [],
+            "nice_to_have_skills": [],
+            "salary_min": None,
+            "salary_max": None,
+            "location": None,
+            "must_have_questions": [],
+            "preferred_questions": []
+        }
+    
+    prompt = f"""Parse this LinkedIn job post and extract all relevant information.
+
+LinkedIn Job Text:
+{linkedin_text[:12000]}
+
+Extract and structure the following information:
+1. job_title - The position title
+2. description - Clean job description (remove company branding fluff, keep core responsibilities and requirements)
+3. required_skills - Array of must-have technical and soft skills
+4. nice_to_have_skills - Array of preferred/bonus skills
+5. salary_min and salary_max - If salary range is mentioned (annual USD, null if not mentioned)
+6. location - Location info (Remote/Hybrid/City, null if not mentioned)
+7. must_have_questions - Extract screening questions labeled as "must-have" or "required" with their ideal answers
+8. preferred_questions - Extract screening questions labeled as "preferred" or "nice-to-have" with their ideal answers
+
+For screening questions, look for sections like:
+- "Must-have Qualifications"
+- "Required Qualifications"
+- "Preferred Qualifications"
+- "Nice-to-have"
+- "Screening Questions"
+
+Each question object should have:
+- question: The actual question text
+- ideal_answer: The expected/ideal answer or qualification
+
+Return a JSON object with this exact structure:
+{{
+  "job_title": "Senior Full-Stack Engineer",
+  "description": "We are seeking a talented engineer to...",
+  "required_skills": ["Python", "React", "PostgreSQL", "AWS"],
+  "nice_to_have_skills": ["Docker", "Kubernetes", "GraphQL"],
+  "salary_min": 120000,
+  "salary_max": 180000,
+  "location": "Remote",
+  "must_have_questions": [
+    {{"question": "How many years of Python experience do you have?", "ideal_answer": "5+ years"}},
+    {{"question": "Have you built production React applications?", "ideal_answer": "Yes, multiple applications"}}
+  ],
+  "preferred_questions": [
+    {{"question": "Do you have experience with Docker?", "ideal_answer": "Yes, used in production"}},
+    {{"question": "Familiar with GraphQL?", "ideal_answer": "Yes, built GraphQL APIs"}}
+  ]
+}}
+
+Be robust - handle different LinkedIn formats, missing sections, and varying question styles."""
+
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            temperature=TEMPERATURE,
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an expert recruiter parsing LinkedIn job posts. Extract all relevant information and screening questions. Always return valid JSON."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+        
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError("Empty response from OpenAI API")
+        
+        result = json.loads(content)
+        logger.info(f"Successfully parsed LinkedIn job: {result.get('job_title', 'Unknown')}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error parsing LinkedIn job: {str(e)}")
+        return {
+            "job_title": "",
+            "description": "",
+            "required_skills": [],
+            "nice_to_have_skills": [],
+            "salary_min": None,
+            "salary_max": None,
+            "location": None,
+            "must_have_questions": [],
+            "preferred_questions": []
+        }
+
+
 def score_candidate_for_job(candidate_profile: Dict[str, Any], job_requirements: Dict[str, Any]) -> Dict[str, Any]:
     """
     Scores a candidate against job requirements using AI analysis.

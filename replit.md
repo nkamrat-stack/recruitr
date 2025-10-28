@@ -21,8 +21,12 @@ Do not make changes to the file `Y`.
   - **Schema**: `candidates`, `candidate_artifacts`, `candidate_profiles`, `jobs`, `matches`, `feedback`, `company_profile`.
 - **API Endpoints**:
   - **Candidates**: CRUD operations, artifact management, AI profile generation and retrieval.
-  - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools, candidate matching, multi-level evaluation pipelines.
-    - `POST /jobs/parse-description`: Parse LinkedIn job descriptions and extract structured fields using AI.
+  - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools, candidate matching, multi-level evaluation pipelines, LinkedIn import with screening questions.
+    - `POST /jobs/parse-linkedin`: Parse complete LinkedIn job posts and extract structured data including screening questions using AI.
+      - Extracts: job_title, description, required_skills (array), nice_to_have_skills (array), salary range, location
+      - Extracts screening questions: must_have_questions and preferred_questions with {question, ideal_answer} structure
+      - Returns structured JSON for auto-filling job creation form
+    - `POST /jobs/parse-description`: Parse LinkedIn job descriptions and extract structured fields using AI (legacy endpoint).
     - `POST /jobs/generate-description`: Generate professional job descriptions from job fields using AI.
     - `GET /jobs/{job_id}/matches`: Retrieve existing candidate matches for a job.
     - `POST /jobs/{job_id}/match`: Match all candidates with AI profiles to a job, scoring and ranking them.
@@ -30,6 +34,10 @@ Do not make changes to the file `Y`.
       - Each level specifies: level_number, level_name, required_deliverables, optional_deliverables, advance_count.
       - Supports unlimited levels with customizable deliverable requirements at each stage.
       - Company profile linkage via `company_profile_id` foreign key.
+    - **Screening Questions**: Jobs can store screening questions parsed from LinkedIn posts in `screening_questions` field (JSON).
+      - Each question has: question, ideal_answer, is_required (boolean)
+      - Questions from LinkedIn's "Must-have Qualifications" are marked as required
+      - Questions from "Preferred Qualifications" are marked as optional
   - **Company Profile**: Manage company information and culture.
     - `GET /company/profile`: Retrieve company profile (404 if none exists).
     - `POST /company/profile`: Create or update company profile (upserts single profile).
@@ -44,7 +52,15 @@ Do not make changes to the file `Y`.
   - **Candidates List (`/candidates`)**: Displays all candidates with AI status, scores, and bulk actions.
   - **Candidate Detail (`/candidates/[id]`)**: Comprehensive view with materials management, compliance checklist, and AI analysis.
   - **Jobs List (`/jobs`)**: Manages job postings with AI-powered creation tools:
-    - **Import from LinkedIn**: Paste job descriptions from LinkedIn or any source, AI extracts all fields automatically.
+    - **Import from LinkedIn**: Advanced AI-powered LinkedIn job parser:
+      - Paste complete LinkedIn job posts (including job description, must-have qualifications, preferred qualifications)
+      - AI extracts all fields: job title, description, skills (required/nice-to-have), salary, location
+      - AI extracts screening questions with ideal answers from qualification sections
+      - Auto-fills job creation form with all parsed data
+      - Maps must-have questions to required deliverables in evaluation pipeline
+      - Maps preferred questions to optional deliverables in evaluation pipeline
+      - User can review and edit all parsed data before saving
+      - Stores screening questions in database for future reference
     - **Generate Description**: AI generates professional LinkedIn-style descriptions from job fields.
     - **Evaluation Pipeline Builder**: Fully configurable multi-level hiring workflow:
       - Add/remove/reorder evaluation levels (unlimited stages)

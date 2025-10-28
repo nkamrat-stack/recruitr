@@ -37,6 +37,7 @@ export default function JobsList() {
   })
 
   const [evaluationLevels, setEvaluationLevels] = useState([])
+  const [screeningQuestions, setScreeningQuestions] = useState([])
   const [collapsedLevels, setCollapsedLevels] = useState({})
   const [customDeliverableInputs, setCustomDeliverableInputs] = useState({})
 
@@ -85,6 +86,7 @@ export default function JobsList() {
         hours_required: parseInt(formData.hours_required),
         start_date_needed: formData.start_date_needed || null,
         evaluation_levels: evaluationLevels,
+        screening_questions: screeningQuestions.length > 0 ? screeningQuestions : null,
       }
 
       const url = editingJob 
@@ -142,6 +144,12 @@ export default function JobsList() {
       }])
     }
     
+    if (job.screening_questions && job.screening_questions.length > 0) {
+      setScreeningQuestions(job.screening_questions)
+    } else {
+      setScreeningQuestions([])
+    }
+    
     setCollapsedLevels({})
     setCustomDeliverableInputs({})
     setShowModal(true)
@@ -179,6 +187,7 @@ export default function JobsList() {
       status: 'open',
     })
     setEvaluationLevels([])
+    setScreeningQuestions([])
     setCollapsedLevels({})
     setCustomDeliverableInputs({})
   }
@@ -204,33 +213,60 @@ export default function JobsList() {
 
     setImporting(true)
     try {
-      const response = await fetch(`${BACKEND_URL}/jobs/parse-description`, {
+      const response = await fetch(`${BACKEND_URL}/jobs/parse-linkedin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description_text: linkedinText }),
+        body: JSON.stringify({ linkedin_text: linkedinText }),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to parse description')
+        throw new Error(errorData.detail || 'Failed to parse LinkedIn job post')
       }
 
       const parsed = await response.json()
       
       setFormData({
-        title: parsed.title || '',
+        title: parsed.job_title || '',
         description: parsed.description || '',
-        required_skills: parsed.required_skills || '',
-        nice_to_have_skills: parsed.nice_to_have_skills || '',
-        culture_requirements: parsed.culture_requirements || '',
+        required_skills: Array.isArray(parsed.required_skills) ? parsed.required_skills.join(', ') : '',
+        nice_to_have_skills: Array.isArray(parsed.nice_to_have_skills) ? parsed.nice_to_have_skills.join(', ') : '',
+        culture_requirements: '',
         salary_min: parsed.salary_min || '',
         salary_max: parsed.salary_max || '',
-        hours_required: parsed.hours_required || 40,
+        hours_required: 40,
         location: parsed.location || '',
         visa_sponsorship_available: false,
         start_date_needed: '',
         status: 'open',
       })
+
+      const mustHaveQuestions = parsed.must_have_questions || []
+      const preferredQuestions = parsed.preferred_questions || []
+      
+      const allQuestions = [
+        ...mustHaveQuestions.map(q => ({ ...q, is_required: true })),
+        ...preferredQuestions.map(q => ({ ...q, is_required: false }))
+      ]
+      setScreeningQuestions(allQuestions)
+      
+      const initialLevel = {
+        level_number: 1,
+        level_name: 'Initial Screen',
+        required_deliverables: ['resume'],
+        optional_deliverables: [],
+        advance_count: null,
+      }
+
+      if (mustHaveQuestions.length > 0) {
+        initialLevel.required_deliverables.push('questionnaire')
+      }
+
+      if (preferredQuestions.length > 0) {
+        initialLevel.optional_deliverables.push('questionnaire')
+      }
+
+      setEvaluationLevels([initialLevel])
 
       setShowImportModal(false)
       setLinkedinText('')
@@ -238,7 +274,7 @@ export default function JobsList() {
       setShowModal(true)
       
     } catch (err) {
-      alert(`Error parsing description: ${err.message}`)
+      alert(`Error parsing LinkedIn job post: ${err.message}`)
     } finally {
       setImporting(false)
     }
