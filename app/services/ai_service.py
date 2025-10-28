@@ -260,20 +260,22 @@ Ensure all scores are between 0 and 1. Base years_experience on evidence in the 
 
 def parse_linkedin_job(linkedin_text: str) -> Dict[str, Any]:
     """
-    Parses a LinkedIn job post and extracts DUAL formats:
-    1. display_html - Preserves original formatting with HTML for display
-    2. structured_data - Extracts all fields, requirements, and screening questions
+    Parses a LinkedIn job post and extracts DUAL formats using TWO separate API calls:
+    1. display_html - Preserves EXACT original content with HTML formatting (no summarization)
+    2. structured_data - Extracts DETAILED structured information for AI matching
+    
+    Uses GPT-4o for better instruction following and content preservation.
     
     Args:
         linkedin_text: Raw text from LinkedIn job posting
     
     Returns:
         Dictionary containing:
-            - display_html: HTML-formatted version preserving original structure
+            - display_html: HTML-formatted version preserving EVERY word from original
             - job_title: String
             - description: AI-generated summary for quick reference
-            - required_skills: List of strings
-            - nice_to_have_skills: List of strings
+            - required_skills: List of FULL requirement texts (not just skill names)
+            - nice_to_have_skills: List of FULL nice-to-have texts
             - salary_min: Optional int
             - salary_max: Optional int
             - location: Optional string
@@ -291,95 +293,140 @@ def parse_linkedin_job(linkedin_text: str) -> Dict[str, Any]:
     if not client:
         raise ValueError("OpenAI API key not configured. Please add your OPENAI_API_KEY to environment variables.")
     
-    prompt = f"""Extract this LinkedIn job post in TWO formats:
+    try:
+        # ===== CALL 1: Generate display_html (simple formatting task) =====
+        display_prompt = f"""CRITICAL: DO NOT SUMMARIZE ANYTHING. Preserve EVERY word, bullet point, and section EXACTLY as written.
+
+Convert this LinkedIn job post to clean HTML with proper formatting:
 
 LinkedIn Job Text:
 {linkedin_text[:12000]}
 
-OUTPUT FORMAT 1 - display_html:
-Preserve the EXACT original formatting using HTML tags. Keep:
-- All sections exactly as they appear (About Us, Job Description, Requirements, Qualifications, etc.)
-- All bullet points using <ul> and <li> tags
-- All numbered lists using <ol> and <li> tags
-- Bold text using <strong> tags
-- Headings using <h2> or <h3> tags
-- Paragraphs using <p> tags
-The goal: Make it look identical to how it appeared on LinkedIn.
+INSTRUCTIONS:
+- Keep ALL sections: Position Overview, Key Responsibilities, Required Qualifications, Preferred Qualifications, Benefits, etc.
+- Keep ALL bullet points and sub-bullets exactly as they appear
+- Keep ALL details - do not condense or shorten anything
+- Use HTML tags: <h2> for section headers, <ul><li> for bullets, <strong> for emphasis, <p> for paragraphs
+- The output should be as long as the input - if input is 5000 words, output is 5000 words in HTML
+- DO NOT create a summary - convert the ENTIRE text to HTML preserving every single word
 
-OUTPUT FORMAT 2 - structured_data:
-Extract comprehensive structured information for AI matching:
+Return ONLY the HTML string (no JSON, no wrapping)."""
 
-1. job_title - Position title
-2. description - AI-generated 2-3 sentence summary for quick reference
-3. required_skills - Array of must-have technical skills
-4. nice_to_have_skills - Array of preferred skills
-5. salary_min and salary_max - Annual USD (null if not mentioned)
-6. location - Location info (null if not mentioned)
-7. experience_min_years and experience_max_years - Years of experience required (null if not mentioned)
-8. work_requirements - Extract:
-   - timezone: Timezone requirements if mentioned
-   - visa_sponsorship: true/false if mentioned
-   - remote_ok: true/false/hybrid
-   - work_hours: Any specific hour requirements
-9. must_have_questions - Screening questions from "Required/Must-have Qualifications" sections
-10. preferred_questions - Screening questions from "Preferred/Nice-to-have" sections
-
-Each question should have:
-- question: The actual question or requirement
-- ideal_answer: Expected qualification or answer
-
-Return a JSON object with this structure:
-{{
-  "display_html": "<h2>About the Company</h2><p>We are...</p><h2>Job Description</h2><ul><li>Build scalable systems</li><li>Lead technical initiatives</li></ul><h2>Requirements</h2><ul><li>5+ years Python</li><li>React experience</li></ul>",
-  "job_title": "Senior Full-Stack Engineer",
-  "description": "Seeking a talented engineer to build scalable web applications using Python and React.",
-  "required_skills": ["Python", "React", "PostgreSQL", "AWS"],
-  "nice_to_have_skills": ["Docker", "Kubernetes", "GraphQL"],
-  "salary_min": 120000,
-  "salary_max": 180000,
-  "location": "Remote",
-  "experience_min_years": 5,
-  "experience_max_years": 10,
-  "work_requirements": {{
-    "timezone": "US Eastern Time",
-    "visa_sponsorship": false,
-    "remote_ok": true,
-    "work_hours": "Flexible"
-  }},
-  "must_have_questions": [
-    {{"question": "How many years of Python experience do you have?", "ideal_answer": "5+ years"}},
-    {{"question": "Have you built production React applications?", "ideal_answer": "Yes, multiple applications"}}
-  ],
-  "preferred_questions": [
-    {{"question": "Do you have Docker experience?", "ideal_answer": "Yes, used in production"}},
-    {{"question": "Familiar with GraphQL?", "ideal_answer": "Yes, built GraphQL APIs"}}
-  ]
-}}
-
-Be robust - handle different formats and missing sections gracefully."""
-
-    try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            temperature=TEMPERATURE,
-            response_format={"type": "json_object"},
+        display_response = client.chat.completions.create(
+            model="gpt-4o",  # Using GPT-4o for better instruction following
+            temperature=0.1,  # Low temperature for exact preservation
+            max_tokens=4000,  # Allow long responses
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an expert recruiter parsing LinkedIn job posts. Extract both display-formatted HTML and comprehensive structured data. Always return valid JSON."
+                    "content": "You are an HTML formatter. Your ONLY job is to convert text to HTML while preserving EVERY single word. Never summarize, never condense, never skip content."
                 },
                 {
                     "role": "user",
-                    "content": prompt
+                    "content": display_prompt
                 }
             ]
         )
         
-        content = response.choices[0].message.content
-        if not content:
-            raise ValueError("OpenAI API returned an empty response. Please try again.")
+        display_html = display_response.choices[0].message.content
+        if not display_html:
+            raise ValueError("Failed to generate display HTML. Please try again.")
         
-        result = json.loads(content)
+        logger.info("Successfully generated display_html")
+        
+        
+        # ===== CALL 2: Extract structured_data (complex extraction task) =====
+        structured_prompt = f"""Extract DETAILED structured data from this LinkedIn job post. DO NOT SUMMARIZE SKILLS.
+
+LinkedIn Job Text:
+{linkedin_text[:12000]}
+
+CRITICAL INSTRUCTIONS FOR SKILLS:
+- required_skills: Extract FULL requirement text, not just skill names
+  Example: ['2-4 years in product management, preferably in SaaS or communications platforms', 'Coding or scripting experience (Python, JavaScript, or similar)', 'Experience managing support queues and ticket systems (Zendesk, Intercom, etc.)']
+  NOT: ['Product Management', 'Coding', 'Support Management']
+
+- nice_to_have_skills: Extract FULL nice-to-have text
+  Example: ['Experience with API integrations and webhooks', 'Familiarity with database query languages (SQL)', 'Previous startup experience in fast-paced environment']
+  NOT: ['APIs', 'SQL', 'Startups']
+
+EXTRACT EVERYTHING:
+- Extract EVERY screening question with exact wording
+- Extract EVERY competency listed
+- Extract success milestones if present
+- Extract work requirements (timezone, visa, remote policy, hours)
+- Capture EVERYTHING - this is for precise candidate matching
+
+Return a JSON object with this structure:
+{{
+  "job_title": "Senior Product Manager",
+  "description": "Brief 2-3 sentence AI-generated summary for quick reference",
+  "required_skills": ["Full detailed requirement text 1", "Full detailed requirement text 2"],
+  "nice_to_have_skills": ["Full nice-to-have text 1", "Full nice-to-have text 2"],
+  "salary_min": 120000,
+  "salary_max": 180000,
+  "location": "Remote (US Eastern Time)",
+  "experience_min_years": 2,
+  "experience_max_years": 4,
+  "work_requirements": {{
+    "timezone": "US Eastern Time",
+    "visa_sponsorship": false,
+    "remote_ok": true,
+    "work_hours": "Full-time, flexible hours"
+  }},
+  "must_have_questions": [
+    {{"question": "How many years of product management experience do you have?", "ideal_answer": "2-4 years in SaaS"}},
+    {{"question": "Describe your experience with support ticketing systems", "ideal_answer": "Used Zendesk, Intercom, or similar tools"}}
+  ],
+  "preferred_questions": [
+    {{"question": "Do you have API integration experience?", "ideal_answer": "Yes, built integrations with REST/GraphQL APIs"}},
+    {{"question": "Have you worked at a startup before?", "ideal_answer": "Yes, thrived in fast-paced environment"}}
+  ]
+}}
+
+Use null for any fields not mentioned in the job post."""
+
+        structured_response = client.chat.completions.create(
+            model="gpt-4o",  # Using GPT-4o for better instruction following
+            temperature=0.3,  # Slightly higher for extraction
+            max_tokens=4000,  # Allow long responses
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an expert recruiter extracting DETAILED structured data from job posts. Extract FULL requirement texts, not just skill names. Never summarize - capture everything for precise candidate matching."
+                },
+                {
+                    "role": "user",
+                    "content": structured_prompt
+                }
+            ]
+        )
+        
+        structured_content = structured_response.choices[0].message.content
+        if not structured_content:
+            raise ValueError("Failed to extract structured data. Please try again.")
+        
+        structured_data = json.loads(structured_content)
+        logger.info("Successfully extracted structured_data")
+        
+        
+        # ===== Combine results =====
+        result = {
+            "display_html": display_html,
+            "job_title": structured_data.get("job_title", ""),
+            "description": structured_data.get("description", ""),
+            "required_skills": structured_data.get("required_skills", []),
+            "nice_to_have_skills": structured_data.get("nice_to_have_skills", []),
+            "salary_min": structured_data.get("salary_min"),
+            "salary_max": structured_data.get("salary_max"),
+            "location": structured_data.get("location"),
+            "experience_min_years": structured_data.get("experience_min_years"),
+            "experience_max_years": structured_data.get("experience_max_years"),
+            "work_requirements": structured_data.get("work_requirements", {}),
+            "must_have_questions": structured_data.get("must_have_questions", []),
+            "preferred_questions": structured_data.get("preferred_questions", [])
+        }
         
         # Validate required fields
         if not result.get("job_title"):
