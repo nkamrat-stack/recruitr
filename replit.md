@@ -51,9 +51,11 @@ Do not make changes to the file `Y`.
     - Filtering: compatible-only toggle, score threshold slider (0-100).
     - Links to candidate profiles for detailed review.
   - **Company Profile (`/settings/company`)**: Manage company information and culture:
-    - Two input modes: Manual Entry (default) and Generate from Website (placeholder for future AI feature).
-    - Form fields: Company Name (required), About, Mission, Vision, Core Values, Culture Description, Website URL.
+    - **View/Edit Mode**: After saving, displays as read-only with "Edit Profile" button. Click to switch to edit mode.
+    - **Read-Only Display**: Shows all company data as formatted text (not form inputs) for professional presentation.
+    - Form fields: Company Name (required), About, Mission, Vision, Core Values, Culture Description, Website URL (flexible format).
     - Single profile design: creates on first save, updates on subsequent saves.
+    - Enhanced success feedback: Prominent green banner with checkmark, 5-second auto-dismiss.
     - Professional TailwindCSS styling with validation and error handling.
 - **Features**:
   - Real-time form validation, professional TailwindCSS styling, and responsive design.

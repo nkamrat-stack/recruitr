@@ -14,11 +14,9 @@ export default function CompanyProfile() {
   
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [generating, setGenerating] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
-  const [inputMode, setInputMode] = useState('manual')
-  const [generationUrl, setGenerationUrl] = useState('')
+  const [viewMode, setViewMode] = useState(false)
   
   const [formData, setFormData] = useState({
     company_name: '',
@@ -41,6 +39,7 @@ export default function CompanyProfile() {
       
       const response = await fetch(`${BACKEND_URL}/company/profile`)
       if (response.status === 404) {
+        setViewMode(false)
         setLoading(false)
         return
       }
@@ -56,6 +55,7 @@ export default function CompanyProfile() {
         culture_description: data.culture_description || '',
         website_url: data.website_url || '',
       })
+      setViewMode(true)
       
     } catch (err) {
       setError(err.message)
@@ -99,8 +99,9 @@ export default function CompanyProfile() {
         website_url: data.website_url || '',
       })
       
-      setSuccess('Company profile saved successfully!')
-      setTimeout(() => setSuccess(null), 3000)
+      setViewMode(true)
+      setSuccess('✓ Company profile saved successfully!')
+      setTimeout(() => setSuccess(null), 5000)
       
     } catch (err) {
       setError(err.message)
@@ -109,22 +110,27 @@ export default function CompanyProfile() {
     }
   }
 
-  const handleGenerateFromWebsite = async () => {
-    if (!generationUrl.trim()) {
-      setError('Please enter a website URL')
-      return
-    }
-    
-    setError('AI website scraping feature coming soon. For now, please enter details manually.')
-    setTimeout(() => setError(null), 4000)
-  }
-
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
       [name]: value
     }))
+  }
+
+  const handleEdit = () => {
+    setViewMode(false)
+    setSuccess(null)
+    setError(null)
+  }
+
+  const handleCancel = () => {
+    if (formData.company_name) {
+      setViewMode(true)
+      fetchProfile()
+    } else {
+      router.push('/jobs')
+    }
   }
 
   if (loading) {
@@ -141,51 +147,133 @@ export default function CompanyProfile() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Company Profile</h1>
-          <p className="text-gray-600">
-            Manage your company information and culture details
-          </p>
+        <div className="mb-6 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Company Profile</h1>
+            <p className="text-gray-600">
+              {viewMode ? 'View your company information and culture details' : 'Manage your company information and culture details'}
+            </p>
+          </div>
+          {viewMode && (
+            <button
+              onClick={handleEdit}
+              className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 font-semibold transition-colors"
+            >
+              Edit Profile
+            </button>
+          )}
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
+          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-lg mb-6 shadow-sm">
+            <div className="flex items-center">
+              <span className="text-xl mr-3">⚠️</span>
+              <span className="font-medium">{error}</span>
+            </div>
           </div>
         )}
 
         {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
-            {success}
+          <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-6 py-4 rounded-lg mb-6 shadow-sm">
+            <div className="flex items-center">
+              <span className="text-xl mr-3">✓</span>
+              <span className="font-semibold">{success}</span>
+            </div>
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-md mb-6">
-          <div className="flex border-b">
-            <button
-              onClick={() => setInputMode('manual')}
-              className={`flex-1 py-4 px-6 font-semibold transition-colors ${
-                inputMode === 'manual'
-                  ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              Manual Entry
-            </button>
-            <button
-              onClick={() => setInputMode('generate')}
-              className={`flex-1 py-4 px-6 font-semibold transition-colors ${
-                inputMode === 'generate'
-                  ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              Generate from Website
-            </button>
-          </div>
+        <div className="bg-white rounded-lg shadow-md">
+          <div className="p-8">
+            {viewMode ? (
+              <div className="space-y-8">
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Company Name
+                  </h2>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formData.company_name || 'Not provided'}
+                  </p>
+                </div>
 
-          <div className="p-6">
-            {inputMode === 'manual' ? (
+                {formData.about_company && (
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      About the Company
+                    </h2>
+                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                      {formData.about_company}
+                    </p>
+                  </div>
+                )}
+
+                {formData.mission && (
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Mission Statement
+                    </h2>
+                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                      {formData.mission}
+                    </p>
+                  </div>
+                )}
+
+                {formData.vision && (
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Vision Statement
+                    </h2>
+                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                      {formData.vision}
+                    </p>
+                  </div>
+                )}
+
+                {formData.values && (
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Core Values
+                    </h2>
+                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                      {formData.values}
+                    </p>
+                  </div>
+                )}
+
+                {formData.culture_description && (
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Culture Description
+                    </h2>
+                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                      {formData.culture_description}
+                    </p>
+                  </div>
+                )}
+
+                {formData.website_url && (
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Website URL
+                    </h2>
+                    <a
+                      href={formData.website_url.startsWith('http') ? formData.website_url : `https://${formData.website_url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 underline text-lg"
+                    >
+                      {formData.website_url}
+                    </a>
+                  </div>
+                )}
+
+                {!formData.about_company && !formData.mission && !formData.vision && !formData.values && !formData.culture_description && !formData.website_url && (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No additional company information provided.</p>
+                    <p className="mt-2">Click "Edit Profile" above to add more details.</p>
+                  </div>
+                )}
+              </div>
+            ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -296,62 +384,13 @@ export default function CompanyProfile() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => router.push('/jobs')}
+                    onClick={handleCancel}
                     className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold transition-colors"
                   >
                     Cancel
                   </button>
                 </div>
               </form>
-            ) : (
-              <div className="space-y-6">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-blue-800 mb-2">
-                    AI-Powered Website Analysis
-                  </h3>
-                  <p className="text-blue-700 mb-4">
-                    Enter your company website URL and our AI will automatically extract and populate
-                    your company information, mission, vision, values, and culture description.
-                  </p>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Website URL
-                      </label>
-                      <input
-                        type="url"
-                        value={generationUrl}
-                        onChange={(e) => setGenerationUrl(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="https://www.yourcompany.com"
-                      />
-                    </div>
-
-                    <button
-                      onClick={handleGenerateFromWebsite}
-                      disabled={generating}
-                      className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold transition-colors flex items-center justify-center"
-                    >
-                      {generating ? (
-                        <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                          Analyzing Website...
-                        </>
-                      ) : (
-                        'Generate from Website'
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <p className="text-sm text-gray-600">
-                    <strong>Note:</strong> After generating, you can switch to Manual Entry mode to review
-                    and edit the AI-generated content before saving.
-                  </p>
-                </div>
-              </div>
             )}
           </div>
         </div>
