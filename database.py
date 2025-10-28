@@ -114,6 +114,7 @@ class Job(Base):
     company_profile_id = Column(Integer, ForeignKey("company_profile.id"))
     evaluation_levels = Column(Text)
     screening_questions = Column(Text)
+    screening_questions_text = Column(Text)  # Raw screening questions text for AI extraction
     
     # New LinkedIn taxonomy fields (JSON stored as Text)
     responsibilities = Column(Text)

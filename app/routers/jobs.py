@@ -58,6 +58,7 @@ class JobCreate(BaseModel):
     company_profile_id: Optional[int] = None
     evaluation_levels: Optional[List[Any]] = None
     screening_questions: Optional[List[Any]] = None
+    screening_questions_text: Optional[str] = None  # Raw screening questions text for AI extraction
     
     # New LinkedIn taxonomy fields
     responsibilities: Optional[List[Any]] = None
@@ -90,6 +91,7 @@ class JobUpdate(BaseModel):
     company_profile_id: Optional[int] = None
     evaluation_levels: Optional[List[Any]] = None
     screening_questions: Optional[List[Any]] = None
+    screening_questions_text: Optional[str] = None
     
     # New LinkedIn taxonomy fields
     responsibilities: Optional[List[Any]] = None
@@ -123,6 +125,7 @@ class JobResponse(BaseModel):
     company_profile_id: Optional[int]
     evaluation_levels: Optional[List[Any]]
     screening_questions: Optional[List[Any]]
+    screening_questions_text: Optional[str]
     
     # New LinkedIn taxonomy fields
     responsibilities: Optional[List[Any]]
