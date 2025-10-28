@@ -400,22 +400,34 @@ def update_job_weights(job_id: int, weight_update: WeightUpdateRequest, db: Sess
     try:
         # Update required qualifications if provided
         if weight_update.required_qualifications is not None:
-            # Mark all as manually set
+            # Validate weight ranges (1-10)
             for qual in weight_update.required_qualifications:
+                if 'weight' in qual:
+                    weight = qual['weight']
+                    if not (1 <= weight <= 10):
+                        raise HTTPException(status_code=400, detail=f"Weight must be between 1 and 10, got {weight}")
                 qual['manually_set'] = True
-            job.required_qualifications = json.dumps(weight_update.required_qualifications)
+            setattr(job, 'required_qualifications', json.dumps(weight_update.required_qualifications))
         
         # Update preferred qualifications if provided
         if weight_update.preferred_qualifications is not None:
             for qual in weight_update.preferred_qualifications:
+                if 'weight' in qual:
+                    weight = qual['weight']
+                    if not (1 <= weight <= 10):
+                        raise HTTPException(status_code=400, detail=f"Weight must be between 1 and 10, got {weight}")
                 qual['manually_set'] = True
-            job.preferred_qualifications = json.dumps(weight_update.preferred_qualifications)
+            setattr(job, 'preferred_qualifications', json.dumps(weight_update.preferred_qualifications))
         
         # Update competencies if provided
         if weight_update.competencies is not None:
             for comp in weight_update.competencies:
+                if 'importance' in comp:
+                    importance = comp['importance']
+                    if not (1 <= importance <= 10):
+                        raise HTTPException(status_code=400, detail=f"Importance must be between 1 and 10, got {importance}")
                 comp['manually_set'] = True
-            job.competencies = json.dumps(weight_update.competencies)
+            setattr(job, 'competencies', json.dumps(weight_update.competencies))
         
         db.commit()
         db.refresh(job)
@@ -431,6 +443,9 @@ def update_job_weights(job_id: int, weight_update: WeightUpdateRequest, db: Sess
             "job": job_dict
         }
     
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Failed to update weights for job {job_id}: {str(e)}")

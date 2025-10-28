@@ -20,6 +20,11 @@ export default function JobDetail() {
   const [activeTab, setActiveTab] = useState('description')
   const [extracting, setExtracting] = useState(false)
   const [extractError, setExtractError] = useState(null)
+  const [editingWeights, setEditingWeights] = useState(false)
+  const [editedRequiredQuals, setEditedRequiredQuals] = useState([])
+  const [editedPreferredQuals, setEditedPreferredQuals] = useState([])
+  const [editedCompetencies, setEditedCompetencies] = useState([])
+  const [savingWeights, setSavingWeights] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -65,6 +70,67 @@ export default function JobDetail() {
     } finally {
       setExtracting(false)
     }
+  }
+
+  const startEditingWeights = () => {
+    setEditingWeights(true)
+    setEditedRequiredQuals(JSON.parse(JSON.stringify(job.required_qualifications || [])))
+    setEditedPreferredQuals(JSON.parse(JSON.stringify(job.preferred_qualifications || [])))
+    setEditedCompetencies(JSON.parse(JSON.stringify(job.competencies || [])))
+  }
+
+  const cancelEditingWeights = () => {
+    setEditingWeights(false)
+    setEditedRequiredQuals([])
+    setEditedPreferredQuals([])
+    setEditedCompetencies([])
+  }
+
+  const saveWeights = async () => {
+    setSavingWeights(true)
+    try {
+      const response = await fetch(`${BACKEND_URL}/jobs/${id}/update-weights`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          required_qualifications: editedRequiredQuals,
+          preferred_qualifications: editedPreferredQuals,
+          competencies: editedCompetencies,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Failed to save weights')
+      }
+
+      const data = await response.json()
+      setJob(data.job)
+      setEditingWeights(false)
+      alert('Weights updated successfully!')
+    } catch (err) {
+      alert(`Error: ${err.message}`)
+    } finally {
+      setSavingWeights(false)
+    }
+  }
+
+  const updateRequiredQualWeight = (index, newWeight) => {
+    const updated = [...editedRequiredQuals]
+    updated[index] = { ...updated[index], weight: parseInt(newWeight) }
+    setEditedRequiredQuals(updated)
+  }
+
+  const updatePreferredQualWeight = (index, newWeight) => {
+    const updated = [...editedPreferredQuals]
+    updated[index] = { ...updated[index], weight: parseInt(newWeight) }
+    setEditedPreferredQuals(updated)
+  }
+
+  const updateCompetencyImportance = (index, newImportance) => {
+    const updated = [...editedCompetencies]
+    updated[index] = { ...updated[index], importance: parseInt(newImportance) }
+    setEditedCompetencies(updated)
   }
 
   if (loading) {
@@ -270,6 +336,36 @@ export default function JobDetail() {
             {activeTab === 'requirements' && (
               <div className="space-y-8">
                 
+                {/* Edit Weights Button */}
+                {job.extraction_status === 'extracted' && (
+                  <div className="flex justify-end gap-3 pb-4 border-b border-gray-200">
+                    {!editingWeights ? (
+                      <button
+                        onClick={startEditingWeights}
+                        className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-md hover:from-purple-700 hover:to-blue-700 transition font-semibold flex items-center gap-2"
+                      >
+                        ✏️ Edit Weights & Importance
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={cancelEditingWeights}
+                          className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={saveWeights}
+                          disabled={savingWeights}
+                          className="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-2 rounded-md hover:from-green-700 hover:to-green-800 transition font-semibold disabled:opacity-50"
+                        >
+                          {savingWeights ? 'Saving...' : '💾 Save Changes'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+                
                 {/* Responsibilities */}
                 {job.responsibilities && job.responsibilities.length > 0 && (
                   <div>
@@ -290,11 +386,11 @@ export default function JobDetail() {
                 )}
 
                 {/* Required Qualifications */}
-                {job.required_qualifications && job.required_qualifications.length > 0 && (
+                {(editingWeights ? editedRequiredQuals : job.required_qualifications)?.length > 0 && (
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-4">✅ Required Qualifications</h3>
                     <div className="space-y-3">
-                      {job.required_qualifications.map((qual, idx) => (
+                      {(editingWeights ? editedRequiredQuals : job.required_qualifications).map((qual, idx) => (
                         <div key={idx} className="flex items-start gap-3 p-3 bg-red-50 rounded-lg">
                           <div className="flex-shrink-0 w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
                             {qual.weight || '?'}
@@ -309,8 +405,33 @@ export default function JobDetail() {
                                   {qual.years_min}-{qual.years_max} years
                                 </span>
                               )}
+                              {qual.manually_set ? (
+                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
+                                  ✓ Manually Set
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                                  🤖 AI Estimated
+                                </span>
+                              )}
                             </div>
                             <p className="text-gray-800">{qual.description}</p>
+                            {editingWeights && (
+                              <div className="mt-3">
+                                <label className="flex items-center gap-3">
+                                  <span className="text-sm font-medium text-gray-700 w-20">Weight:</span>
+                                  <input
+                                    type="range"
+                                    min="1"
+                                    max="10"
+                                    value={qual.weight || 5}
+                                    onChange={(e) => updateRequiredQualWeight(idx, e.target.value)}
+                                    className="flex-1"
+                                  />
+                                  <span className="text-sm font-bold text-red-600 w-8">{qual.weight || 5}/10</span>
+                                </label>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -319,20 +440,47 @@ export default function JobDetail() {
                 )}
 
                 {/* Preferred Qualifications */}
-                {job.preferred_qualifications && job.preferred_qualifications.length > 0 && (
+                {(editingWeights ? editedPreferredQuals : job.preferred_qualifications)?.length > 0 && (
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-4">⭐ Preferred Qualifications</h3>
                     <div className="space-y-3">
-                      {job.preferred_qualifications.map((qual, idx) => (
+                      {(editingWeights ? editedPreferredQuals : job.preferred_qualifications).map((qual, idx) => (
                         <div key={idx} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
                           <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
                             {qual.weight || '?'}
                           </div>
                           <div className="flex-1">
-                            <span className="px-2 py-0.5 bg-blue-200 text-blue-800 text-xs font-medium rounded mb-1 inline-block">
-                              {qual.type}
-                            </span>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="px-2 py-0.5 bg-blue-200 text-blue-800 text-xs font-medium rounded">
+                                {qual.type}
+                              </span>
+                              {qual.manually_set ? (
+                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
+                                  ✓ Manually Set
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                                  🤖 AI Estimated
+                                </span>
+                              )}
+                            </div>
                             <p className="text-gray-800">{qual.description}</p>
+                            {editingWeights && (
+                              <div className="mt-3">
+                                <label className="flex items-center gap-3">
+                                  <span className="text-sm font-medium text-gray-700 w-20">Weight:</span>
+                                  <input
+                                    type="range"
+                                    min="1"
+                                    max="10"
+                                    value={qual.weight || 5}
+                                    onChange={(e) => updatePreferredQualWeight(idx, e.target.value)}
+                                    className="flex-1"
+                                  />
+                                  <span className="text-sm font-bold text-blue-600 w-8">{qual.weight || 5}/10</span>
+                                </label>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -341,11 +489,11 @@ export default function JobDetail() {
                 )}
 
                 {/* Competencies */}
-                {job.competencies && job.competencies.length > 0 && (
+                {(editingWeights ? editedCompetencies : job.competencies)?.length > 0 && (
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-4">🎯 Competencies & Soft Skills</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {job.competencies.map((comp, idx) => (
+                      {(editingWeights ? editedCompetencies : job.competencies).map((comp, idx) => (
                         <div key={idx} className="border border-gray-200 rounded-lg p-4">
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="font-semibold text-gray-900">{comp.name}</h4>
@@ -360,7 +508,34 @@ export default function JobDetail() {
                               ))}
                             </div>
                           </div>
+                          <div className="flex items-center gap-2 mb-2">
+                            {comp.manually_set ? (
+                              <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
+                                ✓ Manually Set
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                                🤖 AI Estimated
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600">{comp.description}</p>
+                          {editingWeights && (
+                            <div className="mt-3">
+                              <label className="flex items-center gap-3">
+                                <span className="text-sm font-medium text-gray-700 w-24">Importance:</span>
+                                <input
+                                  type="range"
+                                  min="1"
+                                  max="10"
+                                  value={comp.importance || 5}
+                                  onChange={(e) => updateCompetencyImportance(idx, e.target.value)}
+                                  className="flex-1"
+                                />
+                                <span className="text-sm font-bold text-green-600 w-8">{comp.importance || 5}/10</span>
+                              </label>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
