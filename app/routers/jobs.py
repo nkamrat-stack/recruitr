@@ -67,6 +67,9 @@ class JobCreate(BaseModel):
     success_milestones: Optional[List[Any]] = None
     work_requirements: Optional[Dict[str, Any]] = None
     application_deliverables: Optional[List[Any]] = None
+    
+    # Extraction status
+    extraction_status: Optional[str] = "not_extracted"
 
 
 class JobUpdate(BaseModel):
@@ -96,6 +99,9 @@ class JobUpdate(BaseModel):
     success_milestones: Optional[List[Any]] = None
     work_requirements: Optional[Dict[str, Any]] = None
     application_deliverables: Optional[List[Any]] = None
+    
+    # Extraction status
+    extraction_status: Optional[str] = None
 
 
 class JobResponse(BaseModel):
@@ -126,6 +132,9 @@ class JobResponse(BaseModel):
     success_milestones: Optional[List[Any]]
     work_requirements: Optional[Dict[str, Any]]
     application_deliverables: Optional[List[Any]]
+    
+    # Extraction status
+    extraction_status: Optional[str]
     
     created_at: Optional[datetime]
     match_count: int = 0
@@ -284,6 +293,91 @@ def delete_job(job_id: int, db: Session = Depends(get_db)):
     db.commit()
     
     return {"message": "Job deleted successfully"}
+
+
+@router.post("/{job_id}/extract-requirements")
+def extract_job_requirements(job_id: int, db: Session = Depends(get_db)):
+    """
+    Extract requirements from a job's LinkedIn description using AI.
+    This is Step 2 of the import workflow: Import (instant) → Extract (AI) → Match
+    """
+    job = db.query(Job).filter(Job.id == job_id).first()
+    
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Check if there's text to extract from
+    text_to_parse = job.display_description or job.linkedin_original_text or job.description
+    if not text_to_parse:
+        raise HTTPException(
+            status_code=400, 
+            detail="No job description available to extract requirements from"
+        )
+    
+    # Set status to extracting
+    job.extraction_status = "extracting"
+    db.commit()
+    
+    try:
+        # Call AI extraction service
+        logger.info(f"Extracting requirements for job {job_id}: {job.title}")
+        result = parse_linkedin_job(text_to_parse)
+        
+        # Update all taxonomy fields with extracted data
+        json_fields_mapping = {
+            'responsibilities': result.get('responsibilities', []),
+            'required_qualifications': result.get('required_qualifications', []),
+            'preferred_qualifications': result.get('preferred_qualifications', []),
+            'competencies': result.get('competencies', []),
+            'success_milestones': result.get('success_milestones', []),
+            'work_requirements': result.get('work_requirements', {}),
+            'application_deliverables': result.get('application_deliverables', []),
+            'screening_questions': result.get('screening_questions', [])
+        }
+        
+        # Serialize and save all JSON fields
+        for field_name, field_value in json_fields_mapping.items():
+            if field_value:
+                setattr(job, field_name, json.dumps(field_value))
+        
+        # Also update basic fields if they were extracted
+        if result.get('job_title') and not job.title:
+            job.title = result['job_title']
+        if result.get('description') and not job.description:
+            job.description = result['description']
+        if result.get('location') and not job.location:
+            job.location = result['location']
+        if result.get('salary_min'):
+            job.salary_min = result['salary_min']
+        if result.get('salary_max'):
+            job.salary_max = result['salary_max']
+        
+        # Mark as successfully extracted
+        job.extraction_status = "extracted"
+        db.commit()
+        db.refresh(job)
+        
+        logger.info(f"Successfully extracted requirements for job {job_id}")
+        
+        return {
+            "message": "Requirements extracted successfully",
+            "job_id": job_id,
+            "extraction_status": "extracted",
+            "extracted_fields": list(json_fields_mapping.keys())
+        }
+    
+    except Exception as e:
+        # Mark as failed and rollback
+        job.extraction_status = "failed"
+        db.commit()
+        
+        error_msg = str(e)
+        logger.error(f"Failed to extract requirements for job {job_id}: {error_msg}")
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to extract requirements: {error_msg}"
+        )
 
 
 class ParseLinkedInRequest(BaseModel):
