@@ -300,7 +300,7 @@ def parse_linkedin_job(linkedin_text: str) -> Dict[str, Any]:
 Convert this LinkedIn job post to clean HTML with proper formatting:
 
 LinkedIn Job Text:
-{linkedin_text[:12000]}
+{linkedin_text}
 
 INSTRUCTIONS:
 - Keep ALL sections: Position Overview, Key Responsibilities, Required Qualifications, Preferred Qualifications, Benefits, etc.
@@ -313,9 +313,9 @@ INSTRUCTIONS:
 Return ONLY the HTML string (no JSON, no wrapping)."""
 
         display_response = client.chat.completions.create(
-            model="gpt-4o",  # Using GPT-4o for better instruction following
+            model="gpt-4o-2024-08-06",  # Using GPT-4o with 16K output support for better instruction following
             temperature=0.1,  # Low temperature for exact preservation
-            max_tokens=4000,  # Allow long responses
+            max_tokens=16384,  # GPT-4o-2024-08-06 maximum output tokens - allows very long job descriptions
             messages=[
                 {
                     "role": "system",
@@ -339,7 +339,7 @@ Return ONLY the HTML string (no JSON, no wrapping)."""
         structured_prompt = f"""Extract DETAILED structured data from this LinkedIn job post. DO NOT SUMMARIZE SKILLS.
 
 LinkedIn Job Text:
-{linkedin_text[:12000]}
+{linkedin_text}
 
 CRITICAL INSTRUCTIONS FOR SKILLS:
 - required_skills: Extract FULL requirement text, not just skill names
@@ -387,9 +387,9 @@ Return a JSON object with this structure:
 Use null for any fields not mentioned in the job post."""
 
         structured_response = client.chat.completions.create(
-            model="gpt-4o",  # Using GPT-4o for better instruction following
+            model="gpt-4o-2024-08-06",  # Using GPT-4o with 16K output support for better instruction following
             temperature=0.3,  # Slightly higher for extraction
-            max_tokens=4000,  # Allow long responses
+            max_tokens=16384,  # GPT-4o-2024-08-06 maximum output tokens - allows detailed extraction from long posts
             response_format={"type": "json_object"},
             messages=[
                 {
