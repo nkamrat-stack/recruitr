@@ -1,0 +1,40 @@
+Improve job display formatting and add screening questions to import:
+
+1. ENHANCE HTML FORMATTING IN DESCRIPTION TAB:
+   - Update CSS for display_description HTML to look professional:
+     * H2 headings: Bold, larger font (text-xl), dark gray color, margin-top for spacing
+     * Paragraphs: Readable line height (1.7), proper spacing
+     * Bullet lists: Indented with proper bullet styling, spaced nicely
+     * Bold text in <strong>: Make it actually bold and slightly darker
+   - Add container with nice padding, max-width for readability
+   - Use a clean font (system-ui or similar)
+   - Make it look like a professional job posting
+
+2. ADD EXPORT FEATURE:
+   - On job detail page, add button: "📋 Copy Formatted Job" next to the tabs
+   - When clicked:
+     * Formats the job as clean text with proper spacing and bullets
+     * Includes: Job Title, Location, Full Description with all sections
+     * Copies to clipboard
+     * Shows toast message: "Job copied to clipboard!"
+   - Format should paste nicely into LinkedIn, email, or docs
+   
+3. ADD SCREENING QUESTIONS TO IMPORT FORM:
+   - On "Import from LinkedIn" modal, add new field BELOW job description:
+     * Label: "Screening Questions (Optional)"
+     * Large textarea
+     * Placeholder: "Paste LinkedIn screening questions here (Must-have and Preferred qualifications with ideal answers)"
+     * Help text: "If your LinkedIn job has screening questions, paste them here. AI will extract them during parsing."
+   
+   - When importing:
+     * Save screening questions text to a temporary field
+     * During extraction, pass both description AND screening questions to AI
+     * AI extracts questions with ideal answers, types, and required/preferred flags
+
+4. UPDATE text_to_html() STYLING:
+   - Make sure headers are wrapped in <h2 class="font-bold text-xl text-gray-800 mt-6 mb-3">
+   - Paragraphs: <p class="mb-4 leading-relaxed text-gray-700">
+   - Bullets: <ul class="list-disc pl-6 mb-4 space-y-2">
+   - List items: <li class="text-gray-700">
+
+Make the job description look like a professional LinkedIn post with proper typography and spacing.

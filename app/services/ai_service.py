@@ -299,9 +299,9 @@ def text_to_html(text: str) -> str:
         if re.match(r'^[•\-\*]\s+', stripped):
             bullet_text = re.sub(r'^[•\-\*]\s+', '', escaped)
             if not in_list:
-                html_lines.append('<ul>')
+                html_lines.append('<ul class="list-disc pl-6 mb-4 space-y-2">')
                 in_list = True
-            html_lines.append(f'<li>{bullet_text}</li>')
+            html_lines.append(f'<li class="text-gray-700">{bullet_text}</li>')
             continue
         
         # Detect numbered lists (starts with 1. or 2. etc)
@@ -310,7 +310,7 @@ def text_to_html(text: str) -> str:
                 html_lines.append('</ul>')
                 in_list = False
             # For numbered items, just treat as regular text
-            html_lines.append(f'<p>{escaped}</p>')
+            html_lines.append(f'<p class="mb-4 leading-relaxed text-gray-700">{escaped}</p>')
             continue
         
         # Close list if we were in one
@@ -320,12 +320,12 @@ def text_to_html(text: str) -> str:
         
         # Detect headers (ALL CAPS or ends with colon)
         if stripped.isupper() and len(stripped) > 3:
-            html_lines.append(f'<h2>{escaped}</h2>')
+            html_lines.append(f'<h2 class="font-bold text-xl text-gray-800 mt-6 mb-3">{escaped}</h2>')
         elif stripped.endswith(':') and len(stripped) > 3 and len(stripped.split()) <= 6:
-            html_lines.append(f'<h2>{escaped}</h2>')
+            html_lines.append(f'<h2 class="font-bold text-xl text-gray-800 mt-6 mb-3">{escaped}</h2>')
         else:
             # Regular paragraph
-            html_lines.append(f'<p>{escaped}</p>')
+            html_lines.append(f'<p class="mb-4 leading-relaxed text-gray-700">{escaped}</p>')
     
     # Close any open list
     if in_list:
