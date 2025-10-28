@@ -376,56 +376,107 @@ def parse_linkedin_job(linkedin_text: str) -> Dict[str, Any]:
         logger.info("Successfully converted text to HTML (no AI, zero summarization)")
         
         
-        # ===== STEP 2: Extract structured_data using AI (complex extraction task) =====
-        structured_prompt = f"""Extract DETAILED structured data from this LinkedIn job post. DO NOT SUMMARIZE SKILLS.
+        # ===== STEP 2: Extract structured_data using AI (complete LinkedIn taxonomy extraction) =====
+        structured_prompt = f"""Extract COMPLETE structured data from this LinkedIn job post using LinkedIn's taxonomy. Extract FULL TEXT for everything.
 
 LinkedIn Job Text:
 {linkedin_text}
 
-CRITICAL INSTRUCTIONS FOR SKILLS:
-- required_skills: Extract FULL requirement text, not just skill names
-  Example: ['2-4 years in product management, preferably in SaaS or communications platforms', 'Coding or scripting experience (Python, JavaScript, or similar)', 'Experience managing support queues and ticket systems (Zendesk, Intercom, etc.)']
-  NOT: ['Product Management', 'Coding', 'Support Management']
+Extract ALL of the following categories:
 
-- nice_to_have_skills: Extract FULL nice-to-have text
-  Example: ['Experience with API integrations and webhooks', 'Familiarity with database query languages (SQL)', 'Previous startup experience in fast-paced environment']
-  NOT: ['APIs', 'SQL', 'Startups']
+1. RESPONSIBILITIES (what the person will do):
+   - Array of {{category, tasks}}
+   - Category: the area (e.g., "Product Strategy", "Team Leadership", "Customer Engagement")
+   - Tasks: array of specific responsibilities
+   Example: [
+     {{"category": "Product Strategy", "tasks": ["Own the product roadmap and prioritize features", "Conduct market research and competitive analysis"]}},
+     {{"category": "Team Leadership", "tasks": ["Manage a team of 3-5 engineers", "Run daily standups and sprint planning"]}}
+   ]
 
-EXTRACT EVERYTHING:
-- Extract EVERY screening question with exact wording
-- Extract EVERY competency listed
-- Extract success milestones if present
-- Extract work requirements (timezone, visa, remote policy, hours)
-- Capture EVERYTHING - this is for precise candidate matching
+2. REQUIRED_QUALIFICATIONS (must-have requirements):
+   - Array with type, description, weight (1-10), years if applicable
+   - Types: "education", "experience", "technical_skill", "certification", "domain_knowledge"
+   Example: [
+     {{"type": "experience", "description": "2-4 years in product management, preferably in SaaS", "weight": 10, "years_min": 2, "years_max": 4}},
+     {{"type": "technical_skill", "description": "Coding or scripting experience (Python, JavaScript, or similar)", "weight": 8}},
+     {{"type": "education", "description": "Bachelor's degree in Computer Science or related field", "weight": 7}}
+   ]
 
-Return a JSON object with this structure:
+3. PREFERRED_QUALIFICATIONS (nice-to-have):
+   - Array with type, description, weight (1-10)
+   Example: [
+     {{"type": "experience", "description": "Previous startup experience in fast-paced environment", "weight": 6}},
+     {{"type": "technical_skill", "description": "Familiarity with database query languages (SQL)", "weight": 5}}
+   ]
+
+4. COMPETENCIES (soft skills, traits, behaviors):
+   - Array with name, description, importance (1-10)
+   Example: [
+     {{"name": "Communication", "description": "Excellent written and verbal communication skills", "importance": 9}},
+     {{"name": "Problem Solving", "description": "Ability to break down complex problems and find creative solutions", "importance": 8}},
+     {{"name": "Ownership", "description": "Takes full ownership of projects from start to finish", "importance": 10}}
+   ]
+
+5. SUCCESS_MILESTONES (what success looks like over time):
+   - Array with timeframe, expectations
+   Example: [
+     {{"timeframe": "30 days", "expectations": ["Complete onboarding", "Ship first small feature", "Build relationships with key stakeholders"]}},
+     {{"timeframe": "90 days", "expectations": ["Own the product roadmap", "Drive 3+ feature launches", "Establish metrics tracking"]}},
+     {{"timeframe": "1 year", "expectations": ["Increase user engagement by 25%", "Build and mentor product team", "Lead strategic initiatives"]}}
+   ]
+
+6. WORK_REQUIREMENTS (logistical constraints):
+   - Single object with all work details
+   Example: {{
+     "timezone": "US Eastern Time",
+     "timezone_overlap_hours": 4,
+     "visa_sponsorship": false,
+     "remote_policy": "Fully remote",
+     "hours_per_week": 40,
+     "travel_required": "10% for conferences",
+     "equipment_provided": ["Laptop", "Monitor", "Ergonomic setup"]
+   }}
+
+7. APPLICATION_DELIVERABLES (what candidates must submit):
+   - Array with name, type, required (boolean), weight (1-10), instructions
+   - Types: "resume", "cover_letter", "portfolio", "code_sample", "video", "questionnaire", "references"
+   Example: [
+     {{"name": "Resume", "type": "resume", "required": true, "weight": 10, "instructions": "Include GitHub link"}},
+     {{"name": "Loom Video", "type": "video", "required": true, "weight": 9, "instructions": "5-min intro: background, interest in role, relevant experience"}},
+     {{"name": "Portfolio", "type": "portfolio", "required": false, "weight": 7, "instructions": "Show 2-3 recent projects"}}
+   ]
+
+8. SCREENING_QUESTIONS (questions for filtering candidates):
+   - Array with question, question_type, ideal_answer, is_required, weight (1-10), deal_breaker (boolean)
+   - Types: "years_experience", "skill_level", "availability", "compensation", "work_style", "scenario", "technical"
+   Example: [
+     {{"question": "How many years of product management experience do you have?", "question_type": "years_experience", "ideal_answer": "2-4 years in SaaS or similar", "is_required": true, "weight": 10, "deal_breaker": true}},
+     {{"question": "Are you comfortable with $120k-$150k salary range?", "question_type": "compensation", "ideal_answer": "Yes", "is_required": true, "weight": 10, "deal_breaker": true}},
+     {{"question": "Describe your experience with API integrations", "question_type": "technical", "ideal_answer": "Built integrations with REST/GraphQL APIs", "is_required": false, "weight": 7, "deal_breaker": false}}
+   ]
+
+Return JSON with this EXACT structure:
 {{
   "job_title": "Senior Product Manager",
-  "description": "Brief 2-3 sentence AI-generated summary for quick reference",
-  "required_skills": ["Full detailed requirement text 1", "Full detailed requirement text 2"],
-  "nice_to_have_skills": ["Full nice-to-have text 1", "Full nice-to-have text 2"],
+  "description": "2-3 sentence AI summary",
+  "location": "Remote (US Eastern Time)",
   "salary_min": 120000,
   "salary_max": 180000,
-  "location": "Remote (US Eastern Time)",
-  "experience_min_years": 2,
-  "experience_max_years": 4,
-  "work_requirements": {{
-    "timezone": "US Eastern Time",
-    "visa_sponsorship": false,
-    "remote_ok": true,
-    "work_hours": "Full-time, flexible hours"
-  }},
-  "must_have_questions": [
-    {{"question": "How many years of product management experience do you have?", "ideal_answer": "2-4 years in SaaS"}},
-    {{"question": "Describe your experience with support ticketing systems", "ideal_answer": "Used Zendesk, Intercom, or similar tools"}}
-  ],
-  "preferred_questions": [
-    {{"question": "Do you have API integration experience?", "ideal_answer": "Yes, built integrations with REST/GraphQL APIs"}},
-    {{"question": "Have you worked at a startup before?", "ideal_answer": "Yes, thrived in fast-paced environment"}}
-  ]
+  "responsibilities": [...],
+  "required_qualifications": [...],
+  "preferred_qualifications": [...],
+  "competencies": [...],
+  "success_milestones": [...],
+  "work_requirements": {{}},
+  "application_deliverables": [...],
+  "screening_questions": [...]
 }}
 
-Use null for any fields not mentioned in the job post."""
+CRITICAL:
+- Extract FULL TEXT, never abbreviate
+- If a category is not mentioned, use empty array [] or null
+- Infer reasonable weights if not explicitly stated (more important = higher weight)
+- Extract EVERYTHING - this is for precise AI candidate matching"""
 
         structured_response = client.chat.completions.create(
             model="gpt-4o-2024-08-06",  # Using GPT-4o with 16K output support for better instruction following
@@ -457,16 +508,19 @@ Use null for any fields not mentioned in the job post."""
             "display_html": display_html,
             "job_title": structured_data.get("job_title", ""),
             "description": structured_data.get("description", ""),
-            "required_skills": structured_data.get("required_skills", []),
-            "nice_to_have_skills": structured_data.get("nice_to_have_skills", []),
+            "location": structured_data.get("location"),
             "salary_min": structured_data.get("salary_min"),
             "salary_max": structured_data.get("salary_max"),
-            "location": structured_data.get("location"),
-            "experience_min_years": structured_data.get("experience_min_years"),
-            "experience_max_years": structured_data.get("experience_max_years"),
+            
+            # New LinkedIn taxonomy fields
+            "responsibilities": structured_data.get("responsibilities", []),
+            "required_qualifications": structured_data.get("required_qualifications", []),
+            "preferred_qualifications": structured_data.get("preferred_qualifications", []),
+            "competencies": structured_data.get("competencies", []),
+            "success_milestones": structured_data.get("success_milestones", []),
             "work_requirements": structured_data.get("work_requirements", {}),
-            "must_have_questions": structured_data.get("must_have_questions", []),
-            "preferred_questions": structured_data.get("preferred_questions", [])
+            "application_deliverables": structured_data.get("application_deliverables", []),
+            "screening_questions": structured_data.get("screening_questions", [])
         }
         
         # Validate required fields

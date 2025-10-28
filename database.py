@@ -114,6 +114,16 @@ class Job(Base):
     company_profile_id = Column(Integer, ForeignKey("company_profile.id"))
     evaluation_levels = Column(Text)
     screening_questions = Column(Text)
+    
+    # New LinkedIn taxonomy fields (JSON stored as Text)
+    responsibilities = Column(Text)
+    required_qualifications = Column(Text)
+    preferred_qualifications = Column(Text)
+    competencies = Column(Text)
+    success_milestones = Column(Text)
+    work_requirements = Column(Text)
+    application_deliverables = Column(Text)
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     
     matches = relationship("Match", back_populates="job")

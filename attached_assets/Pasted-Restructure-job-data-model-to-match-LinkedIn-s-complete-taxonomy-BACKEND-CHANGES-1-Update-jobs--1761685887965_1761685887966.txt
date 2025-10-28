@@ -1,0 +1,51 @@
+Restructure job data model to match LinkedIn's complete taxonomy:
+
+BACKEND CHANGES:
+
+1. Update jobs table schema (database.py):
+   Add these JSON columns:
+   - responsibilities (JSON) - Categories with tasks
+   - required_qualifications (JSON) - With weights and types
+   - preferred_qualifications (JSON) - With weights
+   - competencies (JSON) - Soft skills and traits
+   - success_milestones (JSON) - Timeline-based expectations
+   - work_requirements (JSON) - Timezone, remote policy, etc.
+   - application_deliverables (JSON) - What candidates must submit
+   
+   Keep existing:
+   - linkedin_original_text (raw paste)
+   - display_description (HTML for display)
+   - description (AI summary)
+   - screening_questions (already exists)
+
+2. Rewrite parse_linkedin_job() in ai_service.py:
+   
+   A) Display HTML - Use simple text_to_html() function (NO AI):
+      - Convert plain text to HTML
+      - Preserve EXACT content
+      - Just add formatting tags
+   
+   B) Structured Data - Use GPT-4o to extract ALL categories:
+      - responsibilities (array of {category, tasks})
+      - required_qualifications (array with type, weight, min/max years, skills)
+      - preferred_qualifications (array with type, weight)
+      - competencies (array with name, description, importance)
+      - success_milestones (array with timeframe, expectations)
+      - work_requirements (timezone, remote_policy, visa_sponsorship, hours_per_week)
+      - application_deliverables (array with name, type, required, weight)
+      - screening_questions (array with question, type, ideal_answer, is_required, weight, deal_breaker)
+   
+   Use detailed AI prompt that explains each category and gives examples.
+
+3. Update job endpoints to handle all new fields
+
+FRONTEND CHANGES:
+
+1. Update job detail page tabs:
+   - Description tab: Show display_description (formatted original)
+   - Requirements tab: Show all structured data nicely formatted
+   - Screening Questions tab: Show questions with weights and deal-breakers
+
+2. Update job creation form to accept all new fields (can be optional for now - AI will extract from LinkedIn)
+
+The goal: Every piece of data in the LinkedIn job post is captured in a structured, matchable format.

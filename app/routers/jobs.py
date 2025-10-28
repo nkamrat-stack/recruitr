@@ -15,6 +15,31 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
+# Helper function to deserialize JSON fields in job responses
+def deserialize_job_json_fields(job_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """Deserialize all JSON fields in a job dictionary for API responses."""
+    json_fields = [
+        'evaluation_levels',
+        'screening_questions',
+        'responsibilities',
+        'required_qualifications',
+        'preferred_qualifications',
+        'competencies',
+        'success_milestones',
+        'work_requirements',
+        'application_deliverables'
+    ]
+    
+    for field in json_fields:
+        if job_dict.get(field):
+            try:
+                job_dict[field] = json.loads(job_dict[field])
+            except (json.JSONDecodeError, TypeError):
+                job_dict[field] = None if field == 'work_requirements' else []
+    
+    return job_dict
+
+
 class JobCreate(BaseModel):
     title: str
     description: Optional[str] = None
@@ -33,6 +58,15 @@ class JobCreate(BaseModel):
     company_profile_id: Optional[int] = None
     evaluation_levels: Optional[List[Any]] = None
     screening_questions: Optional[List[Any]] = None
+    
+    # New LinkedIn taxonomy fields
+    responsibilities: Optional[List[Any]] = None
+    required_qualifications: Optional[List[Any]] = None
+    preferred_qualifications: Optional[List[Any]] = None
+    competencies: Optional[List[Any]] = None
+    success_milestones: Optional[List[Any]] = None
+    work_requirements: Optional[Dict[str, Any]] = None
+    application_deliverables: Optional[List[Any]] = None
 
 
 class JobUpdate(BaseModel):
@@ -53,6 +87,15 @@ class JobUpdate(BaseModel):
     company_profile_id: Optional[int] = None
     evaluation_levels: Optional[List[Any]] = None
     screening_questions: Optional[List[Any]] = None
+    
+    # New LinkedIn taxonomy fields
+    responsibilities: Optional[List[Any]] = None
+    required_qualifications: Optional[List[Any]] = None
+    preferred_qualifications: Optional[List[Any]] = None
+    competencies: Optional[List[Any]] = None
+    success_milestones: Optional[List[Any]] = None
+    work_requirements: Optional[Dict[str, Any]] = None
+    application_deliverables: Optional[List[Any]] = None
 
 
 class JobResponse(BaseModel):
@@ -74,6 +117,16 @@ class JobResponse(BaseModel):
     company_profile_id: Optional[int]
     evaluation_levels: Optional[List[Any]]
     screening_questions: Optional[List[Any]]
+    
+    # New LinkedIn taxonomy fields
+    responsibilities: Optional[List[Any]]
+    required_qualifications: Optional[List[Any]]
+    preferred_qualifications: Optional[List[Any]]
+    competencies: Optional[List[Any]]
+    success_milestones: Optional[List[Any]]
+    work_requirements: Optional[Dict[str, Any]]
+    application_deliverables: Optional[List[Any]]
+    
     created_at: Optional[datetime]
     match_count: int = 0
 
@@ -84,17 +137,27 @@ class JobResponse(BaseModel):
 @router.post("/", response_model=JobResponse)
 def create_job(job: JobCreate, db: Session = Depends(get_db)):
     """
-    Create a new job posting.
+    Create a new job posting with complete LinkedIn taxonomy support.
     """
     job_data = job.model_dump()
     
-    # Convert evaluation_levels list to JSON string for database storage
-    if job_data.get('evaluation_levels') is not None:
-        job_data['evaluation_levels'] = json.dumps(job_data['evaluation_levels'])
+    # List of JSON fields that need serialization
+    json_fields = [
+        'evaluation_levels',
+        'screening_questions',
+        'responsibilities',
+        'required_qualifications',
+        'preferred_qualifications',
+        'competencies',
+        'success_milestones',
+        'work_requirements',
+        'application_deliverables'
+    ]
     
-    # Convert screening_questions list to JSON string for database storage
-    if job_data.get('screening_questions') is not None:
-        job_data['screening_questions'] = json.dumps(job_data['screening_questions'])
+    # Convert all JSON fields to strings for database storage
+    for field in json_fields:
+        if job_data.get(field) is not None:
+            job_data[field] = json.dumps(job_data[field])
     
     db_job = Job(**job_data)
     db.add(db_job)
@@ -103,20 +166,7 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
     
     job_dict = db_job.__dict__.copy()
     job_dict['match_count'] = 0
-    
-    # Convert evaluation_levels JSON string back to list for response
-    if job_dict.get('evaluation_levels'):
-        try:
-            job_dict['evaluation_levels'] = json.loads(job_dict['evaluation_levels'])
-        except (json.JSONDecodeError, TypeError):
-            job_dict['evaluation_levels'] = None
-    
-    # Convert screening_questions JSON string back to list for response
-    if job_dict.get('screening_questions'):
-        try:
-            job_dict['screening_questions'] = json.loads(job_dict['screening_questions'])
-        except (json.JSONDecodeError, TypeError):
-            job_dict['screening_questions'] = None
+    deserialize_job_json_fields(job_dict)
     
     return job_dict
 
@@ -150,21 +200,7 @@ def list_jobs(
     for job in jobs:
         job_dict = job.__dict__.copy()
         job_dict['match_count'] = match_dict.get(job.id, 0)
-        
-        # Convert evaluation_levels JSON string back to list
-        if job_dict.get('evaluation_levels'):
-            try:
-                job_dict['evaluation_levels'] = json.loads(job_dict['evaluation_levels'])
-            except (json.JSONDecodeError, TypeError):
-                job_dict['evaluation_levels'] = None
-        
-        # Convert screening_questions JSON string back to list
-        if job_dict.get('screening_questions'):
-            try:
-                job_dict['screening_questions'] = json.loads(job_dict['screening_questions'])
-            except (json.JSONDecodeError, TypeError):
-                job_dict['screening_questions'] = None
-        
+        deserialize_job_json_fields(job_dict)
         result.append(job_dict)
     
     return result
@@ -184,20 +220,7 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
     
     job_dict = job.__dict__.copy()
     job_dict['match_count'] = match_count
-    
-    # Convert evaluation_levels JSON string back to list
-    if job_dict.get('evaluation_levels'):
-        try:
-            job_dict['evaluation_levels'] = json.loads(job_dict['evaluation_levels'])
-        except (json.JSONDecodeError, TypeError):
-            job_dict['evaluation_levels'] = None
-    
-    # Convert screening_questions JSON string back to list
-    if job_dict.get('screening_questions'):
-        try:
-            job_dict['screening_questions'] = json.loads(job_dict['screening_questions'])
-        except (json.JSONDecodeError, TypeError):
-            job_dict['screening_questions'] = None
+    deserialize_job_json_fields(job_dict)
     
     return job_dict
 
@@ -214,13 +237,23 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     
     update_data = job_update.model_dump(exclude_unset=True)
     
-    # Convert evaluation_levels list to JSON string for database storage
-    if 'evaluation_levels' in update_data and update_data['evaluation_levels'] is not None:
-        update_data['evaluation_levels'] = json.dumps(update_data['evaluation_levels'])
+    # List of JSON fields that need serialization
+    json_fields = [
+        'evaluation_levels',
+        'screening_questions',
+        'responsibilities',
+        'required_qualifications',
+        'preferred_qualifications',
+        'competencies',
+        'success_milestones',
+        'work_requirements',
+        'application_deliverables'
+    ]
     
-    # Convert screening_questions list to JSON string for database storage
-    if 'screening_questions' in update_data and update_data['screening_questions'] is not None:
-        update_data['screening_questions'] = json.dumps(update_data['screening_questions'])
+    # Convert all JSON fields to strings for database storage
+    for field in json_fields:
+        if field in update_data and update_data[field] is not None:
+            update_data[field] = json.dumps(update_data[field])
     
     for key, value in update_data.items():
         setattr(job, key, value)
@@ -232,20 +265,7 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     
     job_dict = job.__dict__.copy()
     job_dict['match_count'] = match_count
-    
-    # Convert evaluation_levels JSON string back to list for response
-    if job_dict.get('evaluation_levels'):
-        try:
-            job_dict['evaluation_levels'] = json.loads(job_dict['evaluation_levels'])
-        except (json.JSONDecodeError, TypeError):
-            job_dict['evaluation_levels'] = None
-    
-    # Convert screening_questions JSON string back to list for response
-    if job_dict.get('screening_questions'):
-        try:
-            job_dict['screening_questions'] = json.loads(job_dict['screening_questions'])
-        except (json.JSONDecodeError, TypeError):
-            job_dict['screening_questions'] = None
+    deserialize_job_json_fields(job_dict)
     
     return job_dict
 
@@ -274,16 +294,19 @@ class ParseLinkedInResponse(BaseModel):
     display_html: str
     job_title: str
     description: str
-    required_skills: List[str]
-    nice_to_have_skills: List[str]
     salary_min: Optional[int] = None
     salary_max: Optional[int] = None
     location: Optional[str] = None
-    experience_min_years: Optional[int] = None
-    experience_max_years: Optional[int] = None
+    
+    # New LinkedIn taxonomy fields
+    responsibilities: List[Dict[str, Any]] = []
+    required_qualifications: List[Dict[str, Any]] = []
+    preferred_qualifications: List[Dict[str, Any]] = []
+    competencies: List[Dict[str, Any]] = []
+    success_milestones: List[Dict[str, Any]] = []
     work_requirements: Dict[str, Any] = {}
-    must_have_questions: List[Dict[str, str]]
-    preferred_questions: List[Dict[str, str]]
+    application_deliverables: List[Dict[str, Any]] = []
+    screening_questions: List[Dict[str, Any]] = []
 
 
 @router.post("/parse-linkedin", response_model=ParseLinkedInResponse)
