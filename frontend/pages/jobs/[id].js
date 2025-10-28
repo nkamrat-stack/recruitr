@@ -18,6 +18,8 @@ export default function JobDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('description')
+  const [extracting, setExtracting] = useState(false)
+  const [extractError, setExtractError] = useState(null)
 
   useEffect(() => {
     if (id) {
@@ -37,6 +39,31 @@ export default function JobDetail() {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleExtractRequirements = async () => {
+    setExtracting(true)
+    setExtractError(null)
+    try {
+      const response = await fetch(`${BACKEND_URL}/jobs/${id}/extract-requirements`, {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Failed to extract requirements')
+      }
+
+      // Reload the job to show extracted data
+      await fetchJob()
+      setActiveTab('requirements') // Switch to requirements tab to show results
+      
+    } catch (err) {
+      setExtractError(err.message)
+      alert(`Error: ${err.message}`)
+    } finally {
+      setExtracting(false)
     }
   }
 
@@ -112,6 +139,84 @@ export default function JobDetail() {
             </div>
           </div>
         </div>
+
+        {/* Extraction Status Banner */}
+        {job.extraction_status === 'not_extracted' && (
+          <div className="mb-6 bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-4xl">⚡</div>
+                <div>
+                  <h3 className="text-lg font-bold text-orange-900">Requirements Not Extracted Yet</h3>
+                  <p className="text-sm text-orange-700 mt-1">
+                    Click "Extract Requirements" to analyze this job with AI (~20 seconds). Required before matching candidates.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleExtractRequirements}
+                disabled={extracting}
+                className="px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:from-orange-700 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg shadow-lg transition-all"
+              >
+                {extracting ? '🔄 Extracting...' : '✨ Extract Requirements'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {job.extraction_status === 'extracting' && (
+          <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-6">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin text-3xl">🔄</div>
+              <div>
+                <h3 className="text-lg font-bold text-blue-900">Extracting Requirements...</h3>
+                <p className="text-sm text-blue-700 mt-1">AI is analyzing the job description. This takes about 20 seconds.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {job.extraction_status === 'extracted' && (
+          <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-3xl">✅</div>
+                <div>
+                  <h3 className="text-lg font-bold text-green-900">Requirements Extracted Successfully</h3>
+                  <p className="text-sm text-green-700 mt-1">View detailed requirements in the tabs below or match candidates.</p>
+                </div>
+              </div>
+              <button
+                onClick={handleExtractRequirements}
+                disabled={extracting}
+                className="px-4 py-2 bg-white border-2 border-green-600 text-green-700 rounded-lg hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all"
+              >
+                {extracting ? '🔄 Re-extracting...' : '🔄 Re-extract'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {job.extraction_status === 'failed' && (
+          <div className="mb-6 bg-red-50 border-2 border-red-300 rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-3xl">❌</div>
+                <div>
+                  <h3 className="text-lg font-bold text-red-900">Extraction Failed</h3>
+                  <p className="text-sm text-red-700 mt-1">There was an error extracting requirements. Please try again.</p>
+                </div>
+              </div>
+              <button
+                onClick={handleExtractRequirements}
+                disabled={extracting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+              >
+                {extracting ? '🔄 Retrying...' : '🔄 Try Again'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-md">
@@ -493,12 +598,26 @@ export default function JobDetail() {
 
         {/* Actions */}
         <div className="mt-6 flex gap-3">
-          <Link
-            href={`/jobs/${id}/matches`}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            View Candidate Matches
-          </Link>
+          {job.extraction_status === 'extracted' ? (
+            <Link
+              href={`/jobs/${id}/matches`}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              View Candidate Matches
+            </Link>
+          ) : (
+            <div className="relative group">
+              <button
+                disabled
+                className="px-6 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed"
+              >
+                View Candidate Matches
+              </button>
+              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap">
+                Extract job requirements first
+              </div>
+            </div>
+          )}
           <button
             onClick={() => router.push('/jobs')}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"

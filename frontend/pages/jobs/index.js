@@ -20,6 +20,11 @@ export default function JobsList() {
   const [linkedinText, setLinkedinText] = useState('')
   const [importing, setImporting] = useState(false)
   const [generating, setGenerating] = useState(false)
+  
+  // Simple import fields (Step 1: Instant import without AI)
+  const [importTitle, setImportTitle] = useState('')
+  const [importLocation, setImportLocation] = useState('')
+  const [importDescription, setImportDescription] = useState('')
 
   const [formData, setFormData] = useState({
     title: '',
@@ -209,6 +214,108 @@ export default function JobsList() {
       advance_count: null,
     }])
     setShowModal(true)
+  }
+
+  // Simple text to HTML conversion (no AI, instant)
+  const textToHtml = (text) => {
+    const lines = text.split('\n')
+    let html = ''
+    let inList = false
+    
+    for (const line of lines) {
+      const trimmed = line.trim()
+      
+      if (!trimmed) {
+        if (inList) {
+          html += '</ul>\n'
+          inList = false
+        }
+        html += '<br>\n'
+        continue
+      }
+      
+      // Check for bullets (•, -, *, numbers)
+      if (/^[•\-\*]/.test(trimmed) || /^\d+[\.\)]/.test(trimmed)) {
+        if (!inList) {
+          html += '<ul>\n'
+          inList = true
+        }
+        const content = trimmed.replace(/^[•\-\*]\s*/, '').replace(/^\d+[\.\)]\s*/, '')
+        html += `<li>${content}</li>\n`
+      }
+      // Check for headers (ALL CAPS or ending with :)
+      else if (trimmed === trimmed.toUpperCase() && trimmed.length > 2 || trimmed.endsWith(':')) {
+        if (inList) {
+          html += '</ul>\n'
+          inList = false
+        }
+        html += `<h3><strong>${trimmed}</strong></h3>\n`
+      }
+      // Regular paragraph
+      else {
+        if (inList) {
+          html += '</ul>\n'
+          inList = false
+        }
+        html += `<p>${trimmed}</p>\n`
+      }
+    }
+    
+    if (inList) {
+      html += '</ul>\n'
+    }
+    
+    return html
+  }
+
+  // NEW: Simple instant import without AI (Step 1)
+  const handleInstantImport = async () => {
+    if (!importTitle.trim() || !importLocation.trim() || !importDescription.trim()) {
+      alert('Please fill in all fields: Title, Location, and Description')
+      return
+    }
+
+    setImporting(true)
+    try {
+      // Convert description to HTML (no AI, instant)
+      const displayHtml = textToHtml(importDescription)
+      
+      // Create job with extraction_status = "not_extracted"
+      const response = await fetch(`${BACKEND_URL}/jobs/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: importTitle,
+          location: importLocation,
+          description: importDescription,
+          display_description: displayHtml,
+          linkedin_original_text: importDescription,
+          extraction_status: 'not_extracted',
+          status: 'open',
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Failed to import job')
+      }
+
+      const newJob = await response.json()
+      
+      // Close modal and reset
+      setShowImportModal(false)
+      setImportTitle('')
+      setImportLocation('')
+      setImportDescription('')
+      
+      // Redirect to job detail page
+      router.push(`/jobs/${newJob.id}`)
+      
+    } catch (err) {
+      alert(`Error: ${err.message}`)
+    } finally {
+      setImporting(false)
+    }
   }
 
   const handleImportFromLinkedIn = async () => {
@@ -579,9 +686,28 @@ export default function JobsList() {
                     <h3 className="text-xl font-bold text-gray-900 flex-1">
                       {job.title}
                     </h3>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(job.status)}`}>
-                      {job.status}
-                    </span>
+                    <div className="flex flex-col gap-1 items-end">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(job.status)}`}>
+                        {job.status}
+                      </span>
+                      {job.extraction_status === 'extracted' ? (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                          ✓ Parsed
+                        </span>
+                      ) : job.extraction_status === 'extracting' ? (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                          ⏳ Parsing
+                        </span>
+                      ) : job.extraction_status === 'failed' ? (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                          ✗ Failed
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                          ○ Not Parsed
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Salary */}
@@ -1074,30 +1200,68 @@ export default function JobsList() {
         </div>
       )}
 
-      {/* Import from LinkedIn Modal */}
+      {/* Import from LinkedIn Modal - SIMPLIFIED (No AI, Instant) */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-2xl font-bold text-gray-900">
-                📋 Import from LinkedIn
+                📋 Import Job
               </h2>
               <p className="text-sm text-gray-600 mt-1">
-                Paste a job description from LinkedIn or any other source, and we'll extract the fields using AI.
+                Paste your LinkedIn job post. This is Step 1: Instant import (no AI). You'll extract requirements on the next page.
               </p>
             </div>
             <div className="p-6 space-y-4">
+              {/* Job Title */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Job Description
+                  Job Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={importTitle}
+                  onChange={(e) => setImportTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Senior Software Engineer"
+                  required
+                />
+              </div>
+
+              {/* Location */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Location <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={importLocation}
+                  onChange={(e) => setImportLocation(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., San Francisco, CA (Remote)"
+                  required
+                />
+              </div>
+
+              {/* Job Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Job Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   rows={12}
-                  value={linkedinText}
-                  onChange={(e) => setLinkedinText(e.target.value)}
+                  value={importDescription}
+                  onChange={(e) => setImportDescription(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                  placeholder="Paste the complete job description here...&#10;&#10;Example:&#10;Senior Software Engineer&#10;&#10;We are seeking a talented Senior Software Engineer...&#10;&#10;Requirements:&#10;- 5+ years of experience with Python&#10;- Strong knowledge of React and TypeScript&#10;..."
+                  placeholder="Paste the complete LinkedIn job description here...&#10;&#10;About The Role&#10;We are seeking a talented engineer...&#10;&#10;Requirements&#10;- 5+ years of experience with Python&#10;- Strong knowledge of React&#10;..."
+                  required
                 />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                <p className="text-sm text-blue-800">
+                  ⚡ <strong>This will be instant!</strong> After importing, you'll click "Extract Requirements" to analyze with AI (~20 seconds).
+                </p>
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
@@ -1105,7 +1269,9 @@ export default function JobsList() {
                   type="button"
                   onClick={() => {
                     setShowImportModal(false)
-                    setLinkedinText('')
+                    setImportTitle('')
+                    setImportLocation('')
+                    setImportDescription('')
                   }}
                   className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                   disabled={importing}
@@ -1114,11 +1280,11 @@ export default function JobsList() {
                 </button>
                 <button
                   type="button"
-                  onClick={handleImportFromLinkedIn}
-                  disabled={importing || !linkedinText.trim()}
-                  className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleInstantImport}
+                  disabled={importing || !importTitle.trim() || !importLocation.trim() || !importDescription.trim()}
+                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-md hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                 >
-                  {importing ? '✨ Parsing with AI...' : '🤖 Parse with AI'}
+                  {importing ? '⏳ Importing...' : '✅ Import Job'}
                 </button>
               </div>
             </div>
