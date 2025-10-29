@@ -8,7 +8,7 @@ import os
 import json
 
 from database import get_db, Candidate, CandidateArtifact, CandidateProfile, Application, Job
-from app.services.ai_service import analyze_artifact, generate_candidate_profile
+from app.services.ai_service import analyze_artifact, generate_candidate_profile, generate_profile_embedding
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
 
