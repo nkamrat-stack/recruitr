@@ -1,10 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import dynamic from 'next/dynamic'
-
-// Import ReactQuill dynamically (client-side only)
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false })
-import 'react-quill/dist/quill.snow.css'
 
 export default function JobsList() {
   const getBackendURL = () => {
@@ -866,21 +861,12 @@ export default function JobsList() {
                     {generating ? '✨ Generating...' : '🤖 Generate Description'}
                   </button>
                 </div>
-                <ReactQuill
-                  theme="snow"
+                <textarea
+                  required
+                  rows={4}
                   value={formData.description}
-                  onChange={(value) => setFormData({ ...formData, description: value })}
-                  className="bg-white rounded-md"
-                  style={{ height: '200px', marginBottom: '50px' }}
-                  modules={{
-                    toolbar: [
-                      [{ 'header': [1, 2, 3, false] }],
-                      ['bold', 'italic', 'underline'],
-                      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                      ['link'],
-                      ['clean']
-                    ]
-                  }}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                   placeholder="Describe the role, responsibilities, and what you're looking for..."
                 />
               </div>
@@ -1304,30 +1290,13 @@ export default function JobsList() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Job Description <span className="text-red-500">*</span>
                 </label>
-                <ReactQuill
-                  theme="snow"
+                <textarea
+                  rows={8}
                   value={importDescription}
-                  onChange={setImportDescription}
-                  className="bg-white rounded-md"
-                  style={{ height: '300px', marginBottom: '50px' }}
-                  modules={{
-                    toolbar: [
-                      [{ 'header': [1, 2, 3, false] }],
-                      ['bold', 'italic', 'underline'],
-                      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                      ['link'],
-                      ['clean']
-                    ]
-                  }}
-                  placeholder="Paste the complete LinkedIn job description here...
-
-About The Role
-We are seeking a talented engineer...
-
-Requirements
-- 5+ years of experience with Python
-- Strong knowledge of React
-..."
+                  onChange={(e) => setImportDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                  placeholder="Paste the complete LinkedIn job description here...&#10;&#10;About The Role&#10;We are seeking a talented engineer...&#10;&#10;Requirements&#10;- 5+ years of experience with Python&#10;- Strong knowledge of React&#10;..."
+                  required
                 />
               </div>
 

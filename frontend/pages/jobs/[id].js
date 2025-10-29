@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import DOMPurify from 'isomorphic-dompurify'
+import dynamic from 'next/dynamic'
+
+// Import ReactQuill dynamically (client-side only)
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false })
+import 'react-quill/dist/quill.snow.css'
 
 export default function JobDetail() {
   const getBackendURL = () => {
@@ -27,6 +32,9 @@ export default function JobDetail() {
   const [savingWeights, setSavingWeights] = useState(false)
   const [showCopyToast, setShowCopyToast] = useState(false)
   const [applicantCount, setApplicantCount] = useState(0)
+  const [editingDescription, setEditingDescription] = useState(false)
+  const [editedDescription, setEditedDescription] = useState('')
+  const [savingDescription, setSavingDescription] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -157,6 +165,44 @@ export default function JobDetail() {
       setTimeout(() => setShowCopyToast(false), 3000)
     } catch (err) {
       alert('Failed to copy to clipboard')
+    }
+  }
+
+  const startEditingDescription = () => {
+    setEditingDescription(true)
+    setEditedDescription(job.display_description || job.description || '')
+  }
+
+  const cancelEditingDescription = () => {
+    setEditingDescription(false)
+    setEditedDescription('')
+  }
+
+  const saveDescription = async () => {
+    setSavingDescription(true)
+    try {
+      const response = await fetch(`${BACKEND_URL}/jobs/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...job,
+          display_description: editedDescription,
+          description: editedDescription.replace(/<[^>]*>/g, ''), // Plain text fallback
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Failed to save description')
+      }
+
+      await fetchJob() // Reload job data
+      setEditingDescription(false)
+      alert('Description updated successfully!')
+    } catch (err) {
+      alert(`Error: ${err.message}`)
+    } finally {
+      setSavingDescription(false)
     }
   }
 
@@ -333,12 +379,42 @@ export default function JobDetail() {
                   </button>
                 ))}
               </div>
-              <button
-                onClick={handleCopyJob}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition text-sm font-medium flex items-center gap-2"
-              >
-                📋 Copy Formatted Job
-              </button>
+              <div className="flex gap-2">
+                {activeTab === 'description' && (
+                  <div className="flex gap-2">
+                    {!editingDescription ? (
+                      <button
+                        onClick={startEditingDescription}
+                        className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:from-purple-700 hover:to-blue-700 transition text-sm font-medium flex items-center gap-2"
+                      >
+                        ✏️ Edit Description
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={cancelEditingDescription}
+                          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium text-sm"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={saveDescription}
+                          disabled={savingDescription}
+                          className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-md hover:from-green-700 hover:to-green-800 transition text-sm font-medium disabled:opacity-50"
+                        >
+                          {savingDescription ? 'Saving...' : '💾 Save Description'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+                <button
+                  onClick={handleCopyJob}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition text-sm font-medium flex items-center gap-2"
+                >
+                  📋 Copy Formatted Job
+                </button>
+              </div>
             </div>
           </div>
 
@@ -346,30 +422,53 @@ export default function JobDetail() {
             {/* Description Tab */}
             {activeTab === 'description' && (
               <div className="max-w-4xl mx-auto">
-                {job.display_description ? (
-                  <div className="job-description-container">
-                    <div 
-                      dangerouslySetInnerHTML={{ 
-                        __html: DOMPurify.sanitize(
-                          // Inject job title after first H3 (company name)
-                          job.display_description.replace(
-                            /(<h3>[^<]+<\/h3>)/,
-                            `$1<div class="job-title-subtitle">${job.title}</div>`
-                          ),
-                          {
-                            ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'br', 'div', 'span'],
-                            ALLOWED_ATTR: ['class']
-                          }
-                        ) 
+                {editingDescription ? (
+                  <div className="bg-white rounded-lg p-4">
+                    <ReactQuill
+                      theme="snow"
+                      value={editedDescription}
+                      onChange={setEditedDescription}
+                      className="bg-white rounded-md"
+                      style={{ height: '500px', marginBottom: '60px' }}
+                      modules={{
+                        toolbar: [
+                          [{ 'header': [1, 2, 3, false] }],
+                          ['bold', 'italic', 'underline'],
+                          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                          ['link'],
+                          ['clean']
+                        ]
                       }}
                     />
                   </div>
-                ) : job.description ? (
-                  <div className="prose prose-lg max-w-none bg-white p-8 rounded-lg border border-gray-200">
-                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{job.description}</p>
-                  </div>
                 ) : (
-                  <p className="text-gray-500 italic">No description available</p>
+                  <>
+                    {job.display_description ? (
+                      <div className="job-description-container">
+                        <div 
+                          dangerouslySetInnerHTML={{ 
+                            __html: DOMPurify.sanitize(
+                              // Inject job title after first H3 (company name)
+                              job.display_description.replace(
+                                /(<h3>[^<]+<\/h3>)/,
+                                `$1<div class="job-title-subtitle">${job.title}</div>`
+                              ),
+                              {
+                                ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'br', 'div', 'span'],
+                                ALLOWED_ATTR: ['class']
+                              }
+                            ) 
+                          }}
+                        />
+                      </div>
+                    ) : job.description ? (
+                      <div className="prose prose-lg max-w-none bg-white p-8 rounded-lg border border-gray-200">
+                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{job.description}</p>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 italic">No description available</p>
+                    )}
+                  </>
                 )}
               </div>
             )}
