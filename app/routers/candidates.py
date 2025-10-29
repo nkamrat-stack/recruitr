@@ -7,7 +7,7 @@ from datetime import datetime, date
 import os
 import json
 
-from database import get_db, Candidate, CandidateArtifact, CandidateProfile, Application, Job
+from database import get_db, Candidate, CandidateArtifact, CandidateProfile, Application, Job, Match, Feedback
 from app.services.ai_service import analyze_artifact, generate_candidate_profile, generate_profile_embedding
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
@@ -274,18 +274,73 @@ def update_candidate(
 @router.delete("/{candidate_id}")
 def delete_candidate(candidate_id: int, db: Session = Depends(get_db)):
     """
-    Soft delete a candidate by setting status to 'deleted'.
+    Permanently delete a candidate and all related data.
+    This will cascade delete:
+    - All artifacts (and physical files)
+    - Profile
+    - Applications
+    - Matches
+    - Feedback
     """
     db_candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
     
     if not db_candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
     
-    db_candidate.status = "deleted"
-    db_candidate.updated_at = datetime.utcnow()
+    # 1. Delete all artifacts and their physical files
+    artifacts = db.query(CandidateArtifact).filter(
+        CandidateArtifact.candidate_id == candidate_id
+    ).all()
+    
+    for artifact in artifacts:
+        # Delete physical file if it exists
+        if artifact.storage_location and os.path.exists(artifact.storage_location):
+            try:
+                os.remove(artifact.storage_location)
+            except Exception as e:
+                print(f"Warning: Failed to delete file {artifact.storage_location}: {e}")
+        
+        db.delete(artifact)
+    
+    # 2. Delete profile
+    profile = db.query(CandidateProfile).filter(
+        CandidateProfile.candidate_id == candidate_id
+    ).first()
+    if profile:
+        db.delete(profile)
+    
+    # 3. Delete applications
+    applications = db.query(Application).filter(
+        Application.candidate_id == candidate_id
+    ).all()
+    for app in applications:
+        db.delete(app)
+    
+    # 4. Delete matches
+    matches = db.query(Match).filter(
+        Match.candidate_id == candidate_id
+    ).all()
+    for match in matches:
+        db.delete(match)
+    
+    # 5. Delete feedback
+    feedback = db.query(Feedback).filter(
+        Feedback.candidate_id == candidate_id
+    ).all()
+    for fb in feedback:
+        db.delete(fb)
+    
+    # 6. Finally, delete the candidate
+    db.delete(db_candidate)
     db.commit()
     
-    return {"message": "Candidate deleted successfully", "id": candidate_id}
+    return {
+        "message": "Candidate and all related data deleted permanently",
+        "id": candidate_id,
+        "artifacts_deleted": len(artifacts),
+        "applications_deleted": len(applications),
+        "matches_deleted": len(matches)
+    }
 
 
 @router.post("/{candidate_id}/generate-profile", response_model=ProfileResponse)

@@ -162,6 +162,31 @@ export default function CandidateDetail() {
     }
   }
 
+  const handleDelete = async () => {
+    const confirmMessage = `Are you sure you want to permanently delete ${candidate.name}?\n\nThis will remove:\n- Candidate record\n- All uploaded materials\n- AI profile\n- Job applications\n- Match scores\n\nThis action cannot be undone!`
+    
+    if (!confirm(confirmMessage)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/candidates/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Failed to delete candidate')
+      }
+
+      const data = await response.json()
+      alert(`Successfully deleted ${candidate.name} and ${data.artifacts_deleted} artifacts`)
+      router.push('/candidates')
+    } catch (err) {
+      alert(`Error deleting candidate: ${err.message}`)
+    }
+  }
+
   const handleUploadArtifact = async (e) => {
     e.preventDefault()
     setUploading(true)
@@ -291,9 +316,17 @@ export default function CandidateDetail() {
             <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getStatusBadgeColor(candidate.status)}`}>
               {candidate.status}
             </span>
-            <button className="bg-white text-blue-600 px-6 py-2 rounded-md font-semibold hover:bg-blue-50 transition">
-              Edit Profile
-            </button>
+            <div className="flex gap-2">
+              <button className="bg-white text-blue-600 px-6 py-2 rounded-md font-semibold hover:bg-blue-50 transition">
+                Edit Profile
+              </button>
+              <button 
+                onClick={handleDelete}
+                className="bg-red-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-red-700 transition"
+              >
+                🗑️ Delete
+              </button>
+            </div>
           </div>
         </div>
       </div>
