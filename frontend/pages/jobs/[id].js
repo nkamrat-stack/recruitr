@@ -330,20 +330,16 @@ export default function JobDetail() {
             {activeTab === 'description' && (
               <div className="max-w-4xl mx-auto">
                 {job.display_description ? (
-                  <div 
-                    className="prose prose-lg max-w-none bg-white p-8 rounded-lg border border-gray-200"
-                    dangerouslySetInnerHTML={{ 
-                      __html: DOMPurify.sanitize(job.display_description, {
-                        ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'br', 'div', 'span'],
-                        ALLOWED_ATTR: ['class']
-                      }) 
-                    }}
-                    style={{
-                      fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-                      lineHeight: '1.8',
-                      color: '#374151'
-                    }}
-                  />
+                  <div className="job-description-container">
+                    <div 
+                      dangerouslySetInnerHTML={{ 
+                        __html: DOMPurify.sanitize(job.display_description, {
+                          ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'br', 'div', 'span'],
+                          ALLOWED_ATTR: ['class']
+                        }) 
+                      }}
+                    />
+                  </div>
                 ) : job.description ? (
                   <div className="prose prose-lg max-w-none bg-white p-8 rounded-lg border border-gray-200">
                     <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{job.description}</p>
@@ -831,6 +827,59 @@ export default function JobDetail() {
           <span className="font-medium">Job copied to clipboard!</span>
         </div>
       )}
+
+      <style jsx>{`
+        .job-description-container {
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 2rem;
+          background: white;
+          border-radius: 8px;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          line-height: 1.8;
+          color: #374151;
+        }
+        
+        .job-description-container :global(h2) {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #1f2937;
+          margin-top: 2rem;
+          margin-bottom: 1rem;
+          border-bottom: 2px solid #e5e7eb;
+          padding-bottom: 0.5rem;
+        }
+        
+        .job-description-container :global(h3) {
+          font-size: 1.25rem;
+          font-weight: 600;
+          color: #374151;
+          margin-top: 1.5rem;
+          margin-bottom: 0.75rem;
+        }
+        
+        .job-description-container :global(p) {
+          margin-bottom: 1rem;
+          line-height: 1.8;
+        }
+        
+        .job-description-container :global(ul) {
+          margin-left: 1.5rem;
+          margin-bottom: 1.5rem;
+          list-style-type: disc;
+        }
+        
+        .job-description-container :global(li) {
+          margin-bottom: 0.5rem;
+          padding-left: 0.5rem;
+          line-height: 1.6;
+        }
+        
+        .job-description-container :global(strong) {
+          font-weight: 600;
+          color: #1f2937;
+        }
+      `}</style>
     </div>
   )
 }
