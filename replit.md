@@ -23,10 +23,14 @@ Do not make changes to the file `Y`.
     - Fields: id, candidate_id, job_id, applied_at, application_status (applied/reviewing/interviewing/rejected/hired), notes
     - Unique constraint on (candidate_id, job_id) prevents duplicate applications
     - Enables application tracking separate from AI matching
-  - **Jobs Table**: Includes dual-format LinkedIn storage:
+  - **CandidateProfile Table**: Includes semantic search support:
+    - `profile_embedding` - Text column storing JSON-encoded embedding vectors for semantic candidate matching
+    - Enables vector-based similarity searches and AI-powered candidate recommendations
+  - **Jobs Table**: Includes dual-format LinkedIn storage and semantic search:
     - `linkedin_original_text` - Raw pasted LinkedIn job text
     - `display_description` - HTML-formatted description preserving original LinkedIn structure
     - `description` - AI-generated summary for quick reference
+    - `job_embedding` - Text column storing JSON-encoded embedding vectors for semantic job matching
 - **API Endpoints**:
   - **Candidates**: CRUD operations, artifact management, AI profile generation and retrieval, job application management.
     - `POST /candidates/{candidate_id}/apply/{job_id}`: Apply candidate to job (prevents duplicates)
