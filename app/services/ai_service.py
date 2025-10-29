@@ -160,6 +160,85 @@ def generate_job_embedding(job_data: Dict[str, Any]) -> List[float]:
     return generate_embedding(combined_text)
 
 
+def semantic_match_candidates(
+    job_embedding: List[float],
+    candidates_with_embeddings: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """
+    Fast semantic similarity matching between job and candidates using cosine similarity.
+    
+    Args:
+        job_embedding: Job's embedding vector (1536 dimensions from text-embedding-3-small)
+        candidates_with_embeddings: List of dicts with:
+            - candidate_id: int
+            - name: str
+            - profile_embedding: str (JSON-encoded list of floats)
+            - (any other candidate fields)
+    
+    Returns:
+        List of candidates sorted by similarity score (highest first) with similarity_score added.
+        Returns empty list if job_embedding is invalid or no valid candidate embeddings.
+    """
+    if not job_embedding or len(job_embedding) == 0:
+        logger.warning("Invalid job embedding provided for semantic matching")
+        return []
+    
+    if not candidates_with_embeddings:
+        logger.warning("No candidates provided for semantic matching")
+        return []
+    
+    try:
+        # Reshape job embedding for sklearn (needs 2D array)
+        job_emb_array = np.array(job_embedding).reshape(1, -1)
+        
+        # Process each candidate
+        results = []
+        for candidate in candidates_with_embeddings:
+            try:
+                # Parse candidate embedding from JSON string
+                if not candidate.get("profile_embedding"):
+                    logger.debug(f"Candidate {candidate.get('candidate_id')} has no embedding, skipping")
+                    continue
+                
+                # Handle both string (from DB) and list (already parsed) formats
+                if isinstance(candidate["profile_embedding"], str):
+                    profile_emb = json.loads(candidate["profile_embedding"])
+                else:
+                    profile_emb = candidate["profile_embedding"]
+                
+                if not profile_emb or len(profile_emb) == 0:
+                    logger.debug(f"Candidate {candidate.get('candidate_id')} has empty embedding, skipping")
+                    continue
+                
+                # Reshape candidate embedding for sklearn
+                candidate_emb_array = np.array(profile_emb).reshape(1, -1)
+                
+                # Calculate cosine similarity
+                similarity = cosine_similarity(job_emb_array, candidate_emb_array)[0][0]
+                
+                # Convert numpy float to Python float
+                similarity_score = float(similarity)
+                
+                # Add similarity score to candidate data
+                candidate_with_score = candidate.copy()
+                candidate_with_score["similarity_score"] = similarity_score
+                results.append(candidate_with_score)
+                
+            except (json.JSONDecodeError, ValueError, TypeError) as e:
+                logger.warning(f"Failed to process candidate {candidate.get('candidate_id')}: {str(e)}")
+                continue
+        
+        # Sort by similarity score descending
+        results.sort(key=lambda x: x["similarity_score"], reverse=True)
+        
+        logger.info(f"Semantic matching complete: {len(results)} candidates ranked by similarity")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error in semantic matching: {str(e)}")
+        return []
+
+
 def analyze_artifact(artifact_text: str, artifact_type: str) -> Dict[str, Any]:
     """
     Analyzes a single artifact (resume, email, video transcript, etc.) using GPT-4o-mini.
