@@ -221,11 +221,16 @@ export default function Candidates() {
               <div>
                 <p className="font-semibold text-gray-700 mb-2">Skills Detected:</p>
                 <div className="flex flex-wrap gap-2">
-                  {result.skills_detected.map((skill, idx) => (
-                    <span key={idx} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                      {skill}
-                    </span>
-                  ))}
+                  {result.skills_detected.map((skill, idx) => {
+                    const skillName = typeof skill === 'object' ? skill.name : skill
+                    const confidence = typeof skill === 'object' ? skill.confidence : null
+                    return (
+                      <span key={idx} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                        {skillName}
+                        {confidence && <span className="ml-1 text-blue-600">({Math.round(confidence * 100)}%)</span>}
+                      </span>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -233,11 +238,14 @@ export default function Candidates() {
               <div>
                 <p className="font-semibold text-gray-700 mb-2">Culture Signals:</p>
                 <div className="flex flex-wrap gap-2">
-                  {result.culture_signals.map((signal, idx) => (
-                    <span key={idx} className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
-                      {signal}
-                    </span>
-                  ))}
+                  {result.culture_signals.map((signal, idx) => {
+                    const signalText = typeof signal === 'object' ? (signal.value || signal.type) : signal
+                    return (
+                      <span key={idx} className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
+                        {signalText}
+                      </span>
+                    )
+                  })}
                 </div>
               </div>
             )}
