@@ -1,0 +1,61 @@
+**📋 YOUR ACTION:**
+
+Tell Replit Agent:
+```
+Add post-upload modal for job selection with checkbox list:
+
+UPLOAD RESUME FLOW (pages/upload-resume or relevant page):
+
+1. Keep upload simple - just file upload, no job selection yet
+
+2. AFTER successful upload, show modal:
+   - Title: "✅ Resume Uploaded Successfully!"
+   - Subtitle: "Apply [Candidate Name] to jobs:"
+   - List all OPEN jobs as checkboxes with:
+     * Job title
+     * Location
+     * Date opened (formatted: "Opened: Jan 15, 2025")
+   - Buttons:
+     * "Skip" (bottom left) - closes modal, no applications created
+     * "Apply to Selected Jobs" (bottom right, primary button)
+
+3. When user clicks "Apply to Selected Jobs":
+   - For each checked job, call: POST /candidates/{id}/apply/{job_id}
+   - Creates application record in applications table
+   - Show success toast: "Applied to 3 jobs: Backend Engineer, Senior Developer, Product Manager"
+   - Close modal
+
+4. "Skip" button behavior:
+   - Closes modal
+   - Candidate saved but not applied to any jobs
+   - Can apply later from candidate profile
+
+BACKEND - APPLICATIONS TABLE (database.py):
+Create table if not exists: applications
+- id (primary key)
+- candidate_id (foreign key)
+- job_id (foreign key)
+- applied_at (timestamp, default now)
+- application_status (TEXT: "applied", "reviewing", "interviewing", "rejected", "hired")
+- UNIQUE constraint on (candidate_id, job_id) - prevent duplicate applications
+
+BACKEND - APPLICATION ENDPOINTS (app/routers/candidates.py or jobs.py):
+- POST /candidates/{candidate_id}/apply/{job_id} - Create application
+- GET /jobs/{job_id}/applicants - Get all candidates who applied
+- GET /jobs/{job_id}/applicant-count - Get count
+
+JOBS LIST PAGE (pages/jobs/index.js):
+- Show badge on each job card: "📥 23 Applicants"
+- Fetch count from /jobs/{id}/applicant-count
+
+JOB DETAIL PAGE (pages/jobs/[id].js):
+- Add "Applicants" tab
+- Shows list of candidates who applied to THIS job
+- Each candidate card has:
+  * Name, email
+  * Applied date
+  * Status dropdown (Applied/Reviewing/Interviewing/Rejected/Hired)
+  * "View Profile" button
+  * "Match & Rank" button
+
+Treat each application as independent - same candidate can be ranked differently for different jobs.

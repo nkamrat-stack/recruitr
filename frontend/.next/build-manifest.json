@@ -41,16 +41,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/jobs/[id].js"
-    ],
-    "/rank-candidates": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/rank-candidates.js"
-    ],
-    "/settings/company": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/settings/company.js"
     ]
   },
   "ampFirstPages": []
