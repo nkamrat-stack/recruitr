@@ -2,7 +2,10 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/": "pages/index.js",
-  "/jobs/[id]": "pages/jobs/[id].js",
-  "/jobs": "pages/jobs.js"
+  "/jobs": "pages/jobs.js",
+  "/settings/company": "pages/settings/company.js",
+  "/candidates": "pages/candidates.js",
+  "/candidates/upload": "pages/candidates/upload.js",
+  "/rank-candidates": "pages/rank-candidates.js",
+  "/jobs/[id]": "pages/jobs/[id].js"
 }

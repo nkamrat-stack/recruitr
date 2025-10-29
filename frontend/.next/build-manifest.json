@@ -12,11 +12,6 @@
   ],
   "rootMainFiles": [],
   "pages": {
-    "/": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/index.js"
-    ],
     "/_app": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
@@ -27,6 +22,16 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
+    "/candidates": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/candidates.js"
+    ],
+    "/candidates/upload": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/candidates/upload.js"
+    ],
     "/jobs": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
@@ -36,6 +41,16 @@
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/jobs/[id].js"
+    ],
+    "/rank-candidates": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/rank-candidates.js"
+    ],
+    "/settings/company": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/settings/company.js"
     ]
   },
   "ampFirstPages": []

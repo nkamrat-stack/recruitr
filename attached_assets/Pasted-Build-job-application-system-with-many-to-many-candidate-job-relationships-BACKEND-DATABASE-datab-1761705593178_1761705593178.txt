@@ -1,0 +1,73 @@
+Build job application system with many-to-many candidate-job relationships:
+
+BACKEND DATABASE (database.py):
+Create new table: applications
+
+Fields:
+- id (primary key)
+- candidate_id (foreign key to candidates)
+- job_id (foreign key to jobs)
+- applied_at (timestamp, default now)
+- application_status (TEXT: "applied", "reviewing", "interviewing", "rejected", "hired")
+- notes (TEXT, optional - internal notes about application)
+
+Add unique constraint: (candidate_id, job_id) - prevent duplicate applications
+
+BACKEND API (app/routers/candidates.py):
+Add endpoints:
+- POST /candidates/{candidate_id}/apply/{job_id} - Apply candidate to job
+- DELETE /applications/{application_id} - Remove application
+- GET /candidates/{candidate_id}/applications - Get all jobs candidate applied to
+- PUT /applications/{application_id}/status - Update application status
+
+BACKEND API (app/routers/jobs.py):
+Add endpoints:
+- GET /jobs/{job_id}/applicants - Get all candidates who applied to this job
+- GET /jobs/{job_id}/applicant-count - Get count of applicants
+
+FRONTEND - UPLOAD RESUME FLOW (pages/upload-resume or relevant page):
+Update to include job selection:
+1. After uploading resume, show dropdown: "Apply to job (optional)"
+2. Dropdown lists all open jobs
+3. If job selected, create application record
+4. Show success: "Resume uploaded and applied to [Job Name]"
+5. Allow "Apply to Additional Jobs" button after upload
+
+FRONTEND - CANDIDATES LIST (pages/candidates/index.js):
+Add "Applied Jobs" column:
+- Show badges for each job candidate applied to
+- Click badge to view job
+- "Apply to Job" button for each candidate
+- Shows "Not applied to any jobs" if no applications
+
+FRONTEND - JOB DETAIL PAGE (pages/jobs/[id].js):
+Add applicant tracking:
+1. Header shows: "📥 50 Applicants" badge
+2. "View Matches" button dropdown with 2 options:
+   - "Match Applicants Only" (default) - only candidates who applied
+   - "Match All Candidates" - everyone in database
+3. Show applicant count even before extraction
+
+FRONTEND - JOB MATCHES PAGE (pages/jobs/[id]/matches.js):
+Update to handle filtering:
+1. Add toggle at top: 
+   - "Show Applicants Only" (default, shows only candidates who applied)
+   - "Show All Candidates" (shows everyone, ranked)
+2. Badge on each candidate: "✓ Applied" vs "Not Applied"
+3. Different visual treatment for applicants vs non-applicants
+4. Allow "Add to Applicants" button for non-applicants
+
+FRONTEND - ADD APPLY FUNCTIONALITY:
+Create modal/dropdown for applying candidates to jobs:
+- Shows list of open jobs
+- Checkbox for each job
+- "Apply" button
+- Success message
+
+UI/UX IMPROVEMENTS:
+- Jobs list shows "X applicants" badge on each card
+- Candidates list shows which jobs they've applied to
+- Easy way to apply candidate to job from either side
+- Application status dropdown (Applied → Reviewing → Interviewing → Rejected/Hired)
+
+Make the workflow intuitive: Upload → Apply to Job → Match → Review → Update Status
