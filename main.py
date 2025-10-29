@@ -112,8 +112,44 @@ async def upload_candidate(
     if existing:
         raise HTTPException(status_code=400, detail="Candidate with this email already exists")
     
-    resume_text = await file.read()
-    resume_text = resume_text.decode("utf-8")
+    # Read file content
+    file_content = await file.read()
+    
+    # Extract text based on file type
+    filename = file.filename or ""
+    resume_text = ""
+    
+    if filename.lower().endswith('.pdf'):
+        # Parse PDF with pdfplumber
+        import io
+        import pdfplumber
+        
+        try:
+            with pdfplumber.open(io.BytesIO(file_content)) as pdf:
+                pages_text = []
+                for page in pdf.pages:
+                    text = page.extract_text()
+                    if text:
+                        pages_text.append(text)
+                resume_text = "\n".join(pages_text)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to parse PDF: {str(e)}")
+    
+    elif filename.lower().endswith(('.txt', '.doc', '.docx')):
+        # Try to decode as UTF-8 text
+        try:
+            resume_text = file_content.decode("utf-8")
+        except UnicodeDecodeError:
+            try:
+                # Try latin-1 as fallback
+                resume_text = file_content.decode("latin-1")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Failed to decode text file: {str(e)}")
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported file format. Please upload .pdf, .txt, .doc, or .docx")
+    
+    if not resume_text.strip():
+        raise HTTPException(status_code=400, detail="No text could be extracted from the file")
     
     candidate = Candidate(name=name, email=email)
     db.add(candidate)
