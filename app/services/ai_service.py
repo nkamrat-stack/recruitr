@@ -715,3 +715,129 @@ All scores should be 0-100. Be realistic and evidence-based."""
             "evidence": json.dumps({}),
             "ai_reasoning": f"Scoring failed: {str(e)}"
         }
+
+
+def generate_job_description_from_form(
+    job_title: str,
+    location: str,
+    responsibilities: str,
+    required_skills: str,
+    nice_to_have_skills: str = "",
+    salary_min: Optional[int] = None,
+    salary_max: Optional[int] = None,
+    hours_per_week: Optional[int] = None,
+    additional_context: str = ""
+) -> Dict[str, str]:
+    """
+    Generates a professional LinkedIn-style job description from structured form data.
+    
+    Args:
+        job_title: The job title
+        location: Job location
+        responsibilities: Key responsibilities (can include bullets)
+        required_skills: Required skills (comma-separated or formatted)
+        nice_to_have_skills: Optional skills (comma-separated or formatted)
+        salary_min: Minimum salary
+        salary_max: Maximum salary
+        hours_per_week: Expected hours per week
+        additional_context: Additional company/role context
+    
+    Returns:
+        Dictionary containing:
+            - html_description: Full HTML-formatted job description (LinkedIn-style)
+            - plain_text: Plain text version
+    """
+    client = get_openai_client(timeout=60.0)
+    if not client:
+        logger.error("Cannot generate job description: OpenAI client not available")
+        return {
+            "html_description": "<p>Job description generation unavailable - OpenAI API key not configured</p>",
+            "plain_text": "Job description generation unavailable - OpenAI API key not configured"
+        }
+    
+    salary_info = ""
+    if salary_min and salary_max:
+        salary_info = f"${salary_min:,} - ${salary_max:,}"
+    elif salary_min:
+        salary_info = f"${salary_min:,}+"
+    
+    hours_info = f"{hours_per_week} hours/week" if hours_per_week else "Full-time"
+    
+    # Build optional sections outside of f-string
+    nice_to_have_section = f"**Nice-to-Have Skills:**\n{nice_to_have_skills}\n\n" if nice_to_have_skills else ""
+    additional_context_section = f"**Additional Context:**\n{additional_context}\n\n" if additional_context else ""
+    
+    prompt = f"""You are an expert recruiter writing a professional LinkedIn job posting.
+
+Create a compelling, detailed job description using this information:
+
+**Job Title:** {job_title}
+**Location:** {location}
+**Compensation:** {salary_info if salary_info else "Competitive salary"}
+**Hours:** {hours_info}
+
+**Key Responsibilities:**
+{responsibilities}
+
+**Required Skills:**
+{required_skills}
+
+{nice_to_have_section}{additional_context_section}Generate a professional LinkedIn-style job description with these sections:
+1. Position Overview (2-3 paragraphs describing the role and impact)
+2. Key Responsibilities (expand the provided responsibilities into detailed descriptions with specific deliverables)
+3. Required Qualifications (expand skills into detailed requirements with years of experience where appropriate)
+4. Nice-to-Have Skills (if provided, expand into preferred qualifications)
+5. What We Offer (if context provided, extract benefits/culture; otherwise create professional boilerplate)
+
+Format requirements:
+- Use H2 tags for major sections (Position Overview, Key Responsibilities, etc.)
+- Use H3 tags for subsections if needed
+- Use <ul> and <li> for bullet lists
+- Use <strong> for emphasis on key terms
+- Use <p> for paragraphs
+- Write in a professional, engaging tone
+- Be specific and detailed (expand brief points into full descriptions)
+- Make it compelling for candidates
+
+Return a JSON object with:
+{{
+  "html_description": "full HTML content",
+  "plain_text": "plain text version"
+}}"""
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-2024-08-06",  # Use stronger model for generation
+            temperature=0.7,  # More creative for writing
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an expert recruiter and copywriter who creates professional, compelling LinkedIn job postings. Always return valid JSON."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            max_tokens=4096
+        )
+        
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError("Empty response from OpenAI API")
+        
+        result = json.loads(content)
+        
+        logger.info(f"Successfully generated job description for: {job_title}")
+        return {
+            "html_description": result.get("html_description", ""),
+            "plain_text": result.get("plain_text", "")
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating job description: {str(e)}")
+        return {
+            "html_description": f"<p>Error generating job description: {str(e)}</p>",
+            "plain_text": f"Error generating job description: {str(e)}"
+        }

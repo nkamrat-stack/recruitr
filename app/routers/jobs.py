@@ -8,7 +8,7 @@ import json
 import logging
 
 from database import get_db, Job, Match, Candidate, CandidateProfile, CandidateArtifact, Application
-from app.services.ai_service import get_openai_client, score_candidate_for_job, parse_linkedin_job
+from app.services.ai_service import get_openai_client, score_candidate_for_job, parse_linkedin_job, generate_job_description_from_form
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +104,18 @@ class JobUpdate(BaseModel):
     
     # Extraction status
     extraction_status: Optional[str] = None
+
+
+class GenerateJobFromFormRequest(BaseModel):
+    job_title: str
+    location: str
+    responsibilities: str
+    required_skills: str
+    nice_to_have_skills: Optional[str] = ""
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    hours_per_week: Optional[int] = None
+    additional_context: Optional[str] = ""
 
 
 class JobResponse(BaseModel):
@@ -705,6 +717,38 @@ Return a JSON object with this structure:
         
     except Exception as e:
         logger.error(f"Error generating job description: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate job description: {str(e)}"
+        )
+
+
+@router.post("/generate-from-form")
+def generate_job_from_form(request: GenerateJobFromFormRequest):
+    """
+    Generate a full LinkedIn-style job description from structured form data using AI.
+    This is a more comprehensive endpoint than generate-description.
+    """
+    try:
+        result = generate_job_description_from_form(
+            job_title=request.job_title,
+            location=request.location,
+            responsibilities=request.responsibilities,
+            required_skills=request.required_skills,
+            nice_to_have_skills=request.nice_to_have_skills,
+            salary_min=request.salary_min,
+            salary_max=request.salary_max,
+            hours_per_week=request.hours_per_week,
+            additional_context=request.additional_context
+        )
+        
+        return {
+            "html_description": result["html_description"],
+            "plain_text": result["plain_text"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in generate-from-form endpoint: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate job description: {str(e)}"
