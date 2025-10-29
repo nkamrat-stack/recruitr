@@ -3,6 +3,8 @@ import json
 import logging
 from typing import Optional, Dict, List, Any
 from openai import OpenAI
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -4,7 +4,7 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["libxcrypt", "sqlite-interactive", "zip"]
+packages = ["glibcLocales", "libxcrypt", "sqlite-interactive", "zip"]
 
 [workflows]
 runButton = "Project"
