@@ -318,41 +318,68 @@ def text_to_html(text: str) -> str:
             html_lines.append('</ul>')
             in_list = False
         
-        # Detect headers with multiple strategies
-        is_header = False
+        # Detect headers with two-tier hierarchy (H2 for major sections, H3 for subsections)
+        is_h2 = False
+        is_h3 = False
         word_count = len(stripped.split())
         
-        # Strategy 1: ALL CAPS (traditional section headers)
+        # Major section keywords (for H2) - must be primary section indicators
+        # These should be broad categories, not specific subsections
+        h2_keywords_primary = ['overview', 'responsibilities', 'qualifications', 'requirements', 'benefits', 
+                                'about', 'description', 'summary', 'compensation', 'perks',
+                                'we offer', 'you will', 'what we', 'why', 'how to']
+        
+        # Additional keywords that only apply for short 2-3 word phrases
+        h2_keywords_short = ['key', 'required', 'preferred', 'nice', 'must']
+        
+        # Strategy 1: ALL CAPS (traditional major section headers) → H2
         if stripped.isupper() and len(stripped) > 3:
-            is_header = True
+            is_h2 = True
         
-        # Strategy 2: Ends with colon (subsection headers)
-        elif stripped.endswith(':') and len(stripped) > 3 and word_count <= 6:
-            is_header = True
-        
-        # Strategy 3: Short Title Case lines (LinkedIn-style section headers)
-        # Detect lines that are 1-5 words, start with capital, and look like headers
-        elif word_count >= 1 and word_count <= 5:
-            # Check if it's capitalized (first word starts with uppercase)
+        # Strategy 2: Short Title Case lines (LinkedIn-style headers)
+        elif word_count >= 1 and word_count <= 6:
             first_word = stripped.split()[0]
             if first_word[0].isupper():
-                # Additional checks: not a sentence (no common sentence starters unless very short)
-                # and doesn't end with punctuation that indicates it's a sentence
                 sentence_enders = ('.', '!', '?', ',', ';')
                 sentence_starters = ('the', 'a', 'an', 'this', 'that', 'we', 'you', 'it', 'in', 'on', 'at', 'for', 'to', 'from')
                 
                 ends_like_sentence = any(stripped.endswith(p) for p in sentence_enders)
                 starts_like_sentence = first_word.lower() in sentence_starters and word_count > 3
                 
-                # If it's short, capitalized, and doesn't look like a regular sentence, treat as header
+                # If it looks like a header
                 if not ends_like_sentence and not starts_like_sentence:
-                    is_header = True
+                    lower_text = stripped.lower()
+                    
+                    # PRIORITY 1: Check for primary H2 keywords (broad sections)
+                    has_primary_keyword = any(keyword in lower_text for keyword in h2_keywords_primary)
+                    has_short_keyword = any(keyword in lower_text for keyword in h2_keywords_short)
+                    
+                    # H2 if: has primary keyword OR (has short keyword AND word count <= 3)
+                    if has_primary_keyword:
+                        is_h2 = True
+                    elif has_short_keyword and word_count <= 3:
+                        is_h2 = True
+                    # PRIORITY 2: Ends with colon → subsection (H3)
+                    elif stripped.endswith(':'):
+                        is_h3 = True
+                    # PRIORITY 3: Contains "/" or "&" → subsection (H3)
+                    elif '/' in stripped or '&' in stripped:
+                        is_h3 = True
+                    # PRIORITY 4: Short capitalized lines (2-4 words) → subsection (H3)
+                    elif word_count <= 4:
+                        is_h3 = True
+                    # Longer specific phrases (5+ words) → subsection (H3)
+                    else:
+                        is_h3 = True
         
-        if is_header:
-            html_lines.append(f'<h2 class="font-bold text-xl text-gray-800 mt-6 mb-3">{escaped}</h2>')
+        # Apply appropriate header tag
+        if is_h2:
+            html_lines.append(f'<h2>{escaped}</h2>')
+        elif is_h3:
+            html_lines.append(f'<h3>{escaped}</h3>')
         else:
             # Regular paragraph
-            html_lines.append(f'<p class="mb-4 leading-relaxed text-gray-700">{escaped}</p>')
+            html_lines.append(f'<p>{escaped}</p>')
     
     # Close any open list
     if in_list:

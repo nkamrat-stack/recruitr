@@ -836,48 +836,50 @@ export default function JobDetail() {
           background: white;
           border-radius: 8px;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          line-height: 1.8;
-          color: #374151;
+          line-height: 1.6;
+          color: #333333;
         }
         
         .job-description-container :global(h2) {
-          font-size: 1.5rem;
+          font-size: 1.25rem;
           font-weight: 700;
-          color: #1f2937;
-          margin-top: 2rem;
-          margin-bottom: 1rem;
-          border-bottom: 2px solid #e5e7eb;
+          color: #000000;
+          margin-top: 1.5rem;
+          margin-bottom: 0.75rem;
+          border-bottom: 1px solid #e5e7eb;
           padding-bottom: 0.5rem;
         }
         
         .job-description-container :global(h3) {
-          font-size: 1.25rem;
+          font-size: 1rem;
           font-weight: 600;
-          color: #374151;
-          margin-top: 1.5rem;
-          margin-bottom: 0.75rem;
+          color: #000000;
+          margin-top: 1rem;
+          margin-bottom: 0.5rem;
         }
         
         .job-description-container :global(p) {
-          margin-bottom: 1rem;
-          line-height: 1.8;
+          margin-bottom: 0.5rem;
+          line-height: 1.6;
+          color: #333333;
         }
         
         .job-description-container :global(ul) {
           margin-left: 1.5rem;
-          margin-bottom: 1.5rem;
+          margin-bottom: 0.75rem;
           list-style-type: disc;
         }
         
         .job-description-container :global(li) {
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.25rem;
           padding-left: 0.5rem;
-          line-height: 1.6;
+          line-height: 1.5;
+          color: #333333;
         }
         
         .job-description-container :global(strong) {
           font-weight: 600;
-          color: #1f2937;
+          color: #000000;
         }
       `}</style>
     </div>
