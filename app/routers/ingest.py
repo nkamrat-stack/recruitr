@@ -238,7 +238,45 @@ async def upload_candidate_resume(
     db.refresh(artifact)
     
     # 6. Generate candidate profile with embedding
-    profile = generate_candidate_profile(candidate.id, db)
+    # Prepare artifact data for AI profile generation
+    artifacts_data = [{
+        "artifact_type": artifact.artifact_type,
+        "title": artifact.title,
+        "ai_summary": artifact.ai_summary,
+        "ai_extracted_skills": artifact.ai_extracted_skills,
+        "ai_quality_score": artifact.ai_quality_score,
+        "raw_text": artifact.raw_text[:2000] if artifact.raw_text else None,
+        "raw_url": artifact.raw_url
+    }]
+    
+    # Generate profile using AI service
+    try:
+        profile_data = generate_candidate_profile(artifacts_data)
+    except Exception as e:
+        # Log error but continue - profile generation is optional
+        print(f"Warning: Failed to generate profile: {str(e)}")
+        profile_data = None
+    
+    # Generate embedding and save profile if successful
+    if profile_data:
+        try:
+            from app.services.ai_service import generate_profile_embedding
+            from database import CandidateProfile
+            
+            profile_embedding = generate_profile_embedding(profile_data)
+            profile_data["profile_embedding"] = json.dumps(profile_embedding)
+            
+            # Create new profile
+            new_profile = CandidateProfile(
+                candidate_id=candidate.id,
+                last_ai_analysis=datetime.utcnow(),
+                **profile_data
+            )
+            db.add(new_profile)
+            db.commit()
+        except Exception as e:
+            # Log error but continue
+            print(f"Warning: Failed to save profile: {str(e)}")
     
     # 7. Return enriched candidate data
     skills_detected = ai_analysis.get("skills", [])
