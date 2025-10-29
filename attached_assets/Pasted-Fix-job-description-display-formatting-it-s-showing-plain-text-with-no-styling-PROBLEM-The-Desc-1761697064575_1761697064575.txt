@@ -1,0 +1,78 @@
+Fix job description display formatting - it's showing plain text with no styling:
+
+PROBLEM: The Description tab shows plain unstyled text. No bold headings, no proper spacing, no professional look.
+
+FIX THE DESCRIPTION TAB RENDERING:
+
+1. In pages/jobs/[id].js, find the Description tab where display_description is rendered
+
+2. Wrap the HTML content in a styled container with custom CSS:
+
+<div className="job-description-container">
+  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(job.display_description) }} />
+</div>
+
+3. Add <style jsx> block with professional CSS:
+
+<style jsx>{`
+  .job-description-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.8;
+    color: #374151;
+  }
+  
+  .job-description-container h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0.5rem;
+  }
+  
+  .job-description-container h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #374151;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .job-description-container p {
+    margin-bottom: 1rem;
+    line-height: 1.8;
+  }
+  
+  .job-description-container ul {
+    margin-left: 1.5rem;
+    margin-bottom: 1.5rem;
+    list-style-type: disc;
+  }
+  
+  .job-description-container li {
+    margin-bottom: 0.5rem;
+    padding-left: 0.5rem;
+    line-height: 1.6;
+  }
+  
+  .job-description-container strong {
+    font-weight: 600;
+    color: #1f2937;
+  }
+`}</style>
+
+4. Make sure text_to_html() in ai_service.py wraps sections in proper HTML tags:
+   - ALL CAPS lines → <h2>SECTION NAME</h2>
+   - Lines ending with ":" → <h3>Subsection:</h3>
+   - Lines starting with "•", "-", "*" → <ul><li>bullet</li></ul>
+   - Regular text → <p>paragraph</p>
+
+5. Test with the Support & Product Manager job - headings should be bold, large, with underlines. Bullets should be indented with proper spacing.
+
+The goal: Make it look like a professional LinkedIn job post with clear visual hierarchy.

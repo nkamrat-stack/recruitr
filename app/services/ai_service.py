@@ -318,10 +318,37 @@ def text_to_html(text: str) -> str:
             html_lines.append('</ul>')
             in_list = False
         
-        # Detect headers (ALL CAPS or ends with colon)
+        # Detect headers with multiple strategies
+        is_header = False
+        word_count = len(stripped.split())
+        
+        # Strategy 1: ALL CAPS (traditional section headers)
         if stripped.isupper() and len(stripped) > 3:
-            html_lines.append(f'<h2 class="font-bold text-xl text-gray-800 mt-6 mb-3">{escaped}</h2>')
-        elif stripped.endswith(':') and len(stripped) > 3 and len(stripped.split()) <= 6:
+            is_header = True
+        
+        # Strategy 2: Ends with colon (subsection headers)
+        elif stripped.endswith(':') and len(stripped) > 3 and word_count <= 6:
+            is_header = True
+        
+        # Strategy 3: Short Title Case lines (LinkedIn-style section headers)
+        # Detect lines that are 1-5 words, start with capital, and look like headers
+        elif word_count >= 1 and word_count <= 5:
+            # Check if it's capitalized (first word starts with uppercase)
+            first_word = stripped.split()[0]
+            if first_word[0].isupper():
+                # Additional checks: not a sentence (no common sentence starters unless very short)
+                # and doesn't end with punctuation that indicates it's a sentence
+                sentence_enders = ('.', '!', '?', ',', ';')
+                sentence_starters = ('the', 'a', 'an', 'this', 'that', 'we', 'you', 'it', 'in', 'on', 'at', 'for', 'to', 'from')
+                
+                ends_like_sentence = any(stripped.endswith(p) for p in sentence_enders)
+                starts_like_sentence = first_word.lower() in sentence_starters and word_count > 3
+                
+                # If it's short, capitalized, and doesn't look like a regular sentence, treat as header
+                if not ends_like_sentence and not starts_like_sentence:
+                    is_header = True
+        
+        if is_header:
             html_lines.append(f'<h2 class="font-bold text-xl text-gray-800 mt-6 mb-3">{escaped}</h2>')
         else:
             # Regular paragraph
