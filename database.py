@@ -91,6 +91,7 @@ class CandidateProfile(Base):
     profile_completeness = Column(Float)
     last_ai_analysis = Column(DateTime)
     profile_version = Column(Integer, default=1)
+    profile_embedding = Column(Text)  # JSON-encoded embedding vector
     
     candidate = relationship("Candidate", back_populates="profile")
 
@@ -128,6 +129,9 @@ class Job(Base):
     
     # Extraction status tracking
     extraction_status = Column(String, default='not_extracted')
+    
+    # Embedding vector for semantic matching
+    job_embedding = Column(Text)  # JSON-encoded embedding vector
     
     created_at = Column(DateTime, default=datetime.utcnow)
     
