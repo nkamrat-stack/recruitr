@@ -45,8 +45,8 @@ export default function Candidates() {
     setResult(null)
 
     const formData = new FormData()
-    formData.append('name', name)
-    formData.append('email', email)
+    if (name.trim()) formData.append('name', name)
+    if (email.trim()) formData.append('email', email)
     formData.append('file', file)
 
     try {
@@ -148,29 +148,27 @@ export default function Candidates() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Candidate Name
+              Candidate Name (Optional)
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              required
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="John Doe"
+              placeholder="Optional - will be extracted from resume"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+              Email Address (Optional)
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="john@example.com"
+              placeholder="Optional - will be extracted from resume"
             />
           </div>
 
