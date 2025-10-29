@@ -12,6 +12,11 @@
   ],
   "rootMainFiles": [],
   "pages": {
+    "/": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/index.js"
+    ],
     "/_app": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
@@ -27,25 +32,15 @@
       "static/chunks/main.js",
       "static/chunks/pages/candidates.js"
     ],
-    "/candidates/[id]": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/candidates/[id].js"
-    ],
-    "/candidates/upload": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/candidates/upload.js"
-    ],
     "/jobs": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/jobs.js"
     ],
-    "/jobs/[id]": [
+    "/jobs/[id]/matches": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/jobs/[id].js"
+      "static/chunks/pages/jobs/[id]/matches.js"
     ]
   },
   "ampFirstPages": []
