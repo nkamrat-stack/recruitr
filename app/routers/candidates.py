@@ -7,7 +7,7 @@ from datetime import datetime, date
 import os
 import json
 
-from database import get_db, Candidate, CandidateArtifact, CandidateProfile
+from database import get_db, Candidate, CandidateArtifact, CandidateProfile, Application, Job
 from app.services.ai_service import analyze_artifact, generate_candidate_profile
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
@@ -116,6 +116,24 @@ class ProfileResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ApplicationResponse(BaseModel):
+    id: int
+    candidate_id: int
+    job_id: int
+    applied_at: datetime
+    application_status: str
+    notes: Optional[str]
+    job_title: Optional[str] = None
+    job_status: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ApplicationStatusUpdate(BaseModel):
+    application_status: str
 
 
 @router.post("/", response_model=CandidateResponse)
@@ -473,3 +491,134 @@ def list_artifacts(candidate_id: int, db: Session = Depends(get_db)):
     ).all()
     
     return artifacts
+
+
+@router.post("/{candidate_id}/apply/{job_id}", response_model=ApplicationResponse)
+def apply_to_job(candidate_id: int, job_id: int, db: Session = Depends(get_db)):
+    """
+    Apply a candidate to a specific job.
+    """
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    existing_application = db.query(Application).filter(
+        Application.candidate_id == candidate_id,
+        Application.job_id == job_id
+    ).first()
+    if existing_application:
+        raise HTTPException(status_code=400, detail="Candidate already applied to this job")
+    
+    application = Application(
+        candidate_id=candidate_id,
+        job_id=job_id,
+        application_status='applied'
+    )
+    
+    db.add(application)
+    db.commit()
+    db.refresh(application)
+    
+    response_data = ApplicationResponse(
+        id=application.id,
+        candidate_id=application.candidate_id,
+        job_id=application.job_id,
+        applied_at=application.applied_at,
+        application_status=application.application_status,
+        notes=application.notes,
+        job_title=job.title,
+        job_status=job.status
+    )
+    
+    return response_data
+
+
+@router.get("/{candidate_id}/applications", response_model=List[ApplicationResponse])
+def get_candidate_applications(candidate_id: int, db: Session = Depends(get_db)):
+    """
+    Get all jobs a candidate has applied to.
+    Uses join to avoid N+1 queries.
+    """
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    # Use join to fetch applications with job data in one query
+    applications_with_jobs = db.query(Application, Job).join(
+        Job, Application.job_id == Job.id
+    ).filter(
+        Application.candidate_id == candidate_id
+    ).all()
+    
+    response_list = []
+    for app, job in applications_with_jobs:
+        response_list.append(ApplicationResponse(
+            id=app.id,
+            candidate_id=app.candidate_id,
+            job_id=app.job_id,
+            applied_at=app.applied_at,
+            application_status=app.application_status,
+            notes=app.notes,
+            job_title=job.title,
+            job_status=job.status
+        ))
+    
+    return response_list
+
+
+@router.delete("/applications/{application_id}")
+def delete_application(application_id: int, db: Session = Depends(get_db)):
+    """
+    Remove a job application.
+    """
+    application = db.query(Application).filter(Application.id == application_id).first()
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    db.delete(application)
+    db.commit()
+    
+    return {"message": "Application deleted successfully"}
+
+
+@router.put("/applications/{application_id}/status", response_model=ApplicationResponse)
+def update_application_status(
+    application_id: int,
+    status_update: ApplicationStatusUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    Update the status of a job application.
+    Valid statuses: applied, reviewing, interviewing, rejected, hired
+    """
+    application = db.query(Application).filter(Application.id == application_id).first()
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    valid_statuses = ['applied', 'reviewing', 'interviewing', 'rejected', 'hired']
+    if status_update.application_status not in valid_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+        )
+    
+    application.application_status = status_update.application_status
+    db.commit()
+    db.refresh(application)
+    
+    job = db.query(Job).filter(Job.id == application.job_id).first()
+    
+    return ApplicationResponse(
+        id=application.id,
+        candidate_id=application.candidate_id,
+        job_id=application.job_id,
+        applied_at=application.applied_at,
+        application_status=application.application_status,
+        notes=application.notes,
+        job_title=job.title if job else None,
+        job_status=job.status if job else None
+    )

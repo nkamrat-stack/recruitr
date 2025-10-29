@@ -14,6 +14,7 @@ export default function CandidatesList() {
   const router = useRouter()
   const [candidates, setCandidates] = useState([])
   const [profiles, setProfiles] = useState({})
+  const [applications, setApplications] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -56,8 +57,11 @@ export default function CandidatesList() {
       const data = await response.json()
       setCandidates(data)
       
-      // Fetch profiles for all candidates
-      await fetchAllProfiles(data)
+      // Fetch profiles and applications for all candidates in parallel
+      await Promise.all([
+        fetchAllProfiles(data),
+        fetchAllApplications(data)
+      ])
       
       setError(null)
     } catch (err) {
@@ -86,6 +90,27 @@ export default function CandidatesList() {
     )
     
     setProfiles(profilesData)
+  }
+
+  const fetchAllApplications = async (candidateList) => {
+    const applicationsData = {}
+    
+    // Fetch applications in parallel
+    await Promise.all(
+      candidateList.map(async (candidate) => {
+        try {
+          const response = await fetch(`${BACKEND_URL}/candidates/${candidate.id}/applications`)
+          if (response.ok) {
+            const apps = await response.json()
+            applicationsData[candidate.id] = apps
+          }
+        } catch (err) {
+          // No applications, that's ok
+        }
+      })
+    )
+    
+    setApplications(applicationsData)
   }
 
   const getAIStatus = (candidate) => {
@@ -614,6 +639,9 @@ export default function CandidatesList() {
                   Materials
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Applied Jobs
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   AI Status
                 </th>
                 <th 
@@ -659,6 +687,24 @@ export default function CandidatesList() {
                       ) : (
                         <span className="text-gray-400">0 items</span>
                       )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {applications[candidate.id] && applications[candidate.id].length > 0 ? (
+                          applications[candidate.id].map((app) => (
+                            <button
+                              key={app.id}
+                              onClick={() => router.push(`/jobs/${app.job_id}`)}
+                              className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium hover:bg-blue-200 transition"
+                              title={`Applied ${new Date(app.applied_at).toLocaleDateString()}`}
+                            >
+                              {app.job_title || `Job ${app.job_id}`}
+                            </button>
+                          ))
+                        ) : (
+                          <span className="text-gray-400 text-xs">Not applied</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1 ${aiStatusBadge.color}`}>

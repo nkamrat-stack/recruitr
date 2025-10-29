@@ -7,7 +7,7 @@ from datetime import datetime, date
 import json
 import logging
 
-from database import get_db, Job, Match, Candidate, CandidateProfile, CandidateArtifact
+from database import get_db, Job, Match, Candidate, CandidateProfile, CandidateArtifact, Application
 from app.services.ai_service import get_openai_client, score_candidate_for_job, parse_linkedin_job
 
 logger = logging.getLogger(__name__)
@@ -919,3 +919,52 @@ def match_candidates_to_job(job_id: int, db: Session = Depends(get_db)):
     logger.info(f"Successfully matched {len(matches)} candidates to job {job_id}")
     
     return matches
+
+
+@router.get("/{job_id}/applicant-count")
+def get_applicant_count(job_id: int, db: Session = Depends(get_db)):
+    """
+    Get the count of candidates who have applied to a specific job.
+    """
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    count = db.query(Application).filter(Application.job_id == job_id).count()
+    
+    return {"job_id": job_id, "applicant_count": count}
+
+
+@router.get("/{job_id}/applicants")
+def get_job_applicants(job_id: int, db: Session = Depends(get_db)):
+    """
+    Get all candidates who have applied to this job with their application details.
+    Uses join to avoid N+1 queries.
+    """
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Use join to fetch applications with candidate data in one query
+    applications_with_candidates = db.query(Application, Candidate).join(
+        Candidate, Application.candidate_id == Candidate.id
+    ).filter(
+        Application.job_id == job_id
+    ).all()
+    
+    applicants = []
+    for app, candidate in applications_with_candidates:
+        applicant_data = {
+            "application_id": app.id,
+            "application_status": app.application_status,
+            "applied_at": app.applied_at,
+            "notes": app.notes,
+            "candidate_id": candidate.id,
+            "candidate_name": candidate.name,
+            "candidate_email": candidate.email,
+            "candidate_location": candidate.location,
+            "candidate_status": candidate.status
+        }
+        applicants.append(applicant_data)
+    
+    return applicants

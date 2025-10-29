@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Text, Float, Boolean, DateTime, Date
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Text, Float, Boolean, DateTime, Date, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -37,6 +37,7 @@ class Candidate(Base):
     profile = relationship("CandidateProfile", back_populates="candidate", uselist=False)
     matches = relationship("Match", back_populates="candidate")
     feedbacks = relationship("Feedback", back_populates="candidate")
+    applications = relationship("Application", back_populates="candidate")
 
 class Artifact(Base):
     """Legacy artifact table - kept for backwards compatibility"""
@@ -132,6 +133,7 @@ class Job(Base):
     
     matches = relationship("Match", back_populates="job")
     feedbacks = relationship("Feedback", back_populates="job")
+    applications = relationship("Application", back_populates="job")
     company_profile = relationship("CompanyProfile")
 
 class Match(Base):
@@ -157,6 +159,22 @@ class Match(Base):
     
     candidate = relationship("Candidate", back_populates="matches")
     job = relationship("Job", back_populates="matches")
+
+class Application(Base):
+    __tablename__ = "applications"
+    __table_args__ = (
+        UniqueConstraint('candidate_id', 'job_id', name='unique_candidate_job_application'),
+    )
+    
+    id = Column(Integer, primary_key=True, index=True)
+    candidate_id = Column(Integer, ForeignKey("candidates.id"), nullable=False)
+    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
+    applied_at = Column(DateTime, default=datetime.utcnow)
+    application_status = Column(String, default='applied')
+    notes = Column(Text)
+    
+    candidate = relationship("Candidate", back_populates="applications")
+    job = relationship("Job", back_populates="applications")
 
 class Feedback(Base):
     __tablename__ = "feedback"

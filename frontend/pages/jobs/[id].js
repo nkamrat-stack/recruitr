@@ -26,10 +26,12 @@ export default function JobDetail() {
   const [editedCompetencies, setEditedCompetencies] = useState([])
   const [savingWeights, setSavingWeights] = useState(false)
   const [showCopyToast, setShowCopyToast] = useState(false)
+  const [applicantCount, setApplicantCount] = useState(0)
 
   useEffect(() => {
     if (id) {
       fetchJob()
+      fetchApplicantCount()
     }
   }, [id])
 
@@ -45,6 +47,18 @@ export default function JobDetail() {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchApplicantCount = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/jobs/${id}/applicant-count`)
+      if (response.ok) {
+        const data = await response.json()
+        setApplicantCount(data.applicant_count || 0)
+      }
+    } catch (err) {
+      console.error('Failed to fetch applicant count:', err)
     }
   }
 
@@ -202,7 +216,7 @@ export default function JobDetail() {
                 </span>
               )}
             </div>
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex gap-2 items-center">
               <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                 job.status === 'open' ? 'bg-green-100 text-green-700' :
                 job.status === 'closed' ? 'bg-gray-100 text-gray-700' :
@@ -215,6 +229,9 @@ export default function JobDetail() {
                   VISA SPONSORSHIP
                 </span>
               )}
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                📥 {applicantCount} {applicantCount === 1 ? 'Applicant' : 'Applicants'}
+              </span>
             </div>
           </div>
         </div>
