@@ -333,6 +333,15 @@ def generate_profile(candidate_id: int, db: Session = Depends(get_db)):
             detail=f"Failed to generate profile: {str(e)}"
         )
     
+    # Generate embedding from profile data
+    try:
+        profile_embedding = generate_profile_embedding(profile_data)
+        profile_data["profile_embedding"] = json.dumps(profile_embedding)
+    except Exception as e:
+        # Log error but continue - embedding is optional
+        print(f"Warning: Failed to generate profile embedding: {str(e)}")
+        profile_data["profile_embedding"] = None
+    
     # Check if profile already exists
     existing_profile = db.query(CandidateProfile).filter(
         CandidateProfile.candidate_id == candidate_id
