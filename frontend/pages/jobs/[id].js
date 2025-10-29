@@ -333,10 +333,17 @@ export default function JobDetail() {
                   <div className="job-description-container">
                     <div 
                       dangerouslySetInnerHTML={{ 
-                        __html: DOMPurify.sanitize(job.display_description, {
-                          ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'br', 'div', 'span'],
-                          ALLOWED_ATTR: ['class']
-                        }) 
+                        __html: DOMPurify.sanitize(
+                          // Inject job title after first H3 (company name)
+                          job.display_description.replace(
+                            /(<h3>[^<]+<\/h3>)/,
+                            `$1<div class="job-title-subtitle">${job.title}</div>`
+                          ),
+                          {
+                            ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'br', 'div', 'span'],
+                            ALLOWED_ATTR: ['class']
+                          }
+                        ) 
                       }}
                     />
                   </div>
@@ -840,12 +847,20 @@ export default function JobDetail() {
           color: #333333;
         }
         
+        .job-description-container :global(.job-title-subtitle) {
+          font-size: 1rem;
+          font-weight: 400;
+          color: #666666;
+          margin-top: 0.5rem;
+          margin-bottom: 1.5rem;
+        }
+        
         .job-description-container :global(h2) {
           font-size: 1.25rem;
           font-weight: 700;
           color: #000000;
-          margin-top: 1.5rem;
-          margin-bottom: 0.75rem;
+          margin-top: 0.75rem;
+          margin-bottom: 0.5rem;
           border-bottom: 1px solid #e5e7eb;
           padding-bottom: 0.5rem;
         }
@@ -854,7 +869,7 @@ export default function JobDetail() {
           font-size: 1rem;
           font-weight: 600;
           color: #000000;
-          margin-top: 1rem;
+          margin-top: 0.75rem;
           margin-bottom: 0.5rem;
         }
         
@@ -880,6 +895,10 @@ export default function JobDetail() {
         .job-description-container :global(strong) {
           font-weight: 600;
           color: #000000;
+        }
+        
+        .job-description-container :global(br) {
+          display: none;
         }
       `}</style>
     </div>
