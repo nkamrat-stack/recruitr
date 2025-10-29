@@ -4,7 +4,7 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["libxcrypt", "sqlite-interactive"]
+packages = ["libxcrypt", "sqlite-interactive", "zip"]
 
 [workflows]
 runButton = "Project"
@@ -53,10 +53,6 @@ externalPort = 80
 [[ports]]
 localPort = 8000
 externalPort = 8000
-
-[[ports]]
-localPort = 38055
-externalPort = 3001
 
 [[ports]]
 localPort = 41867

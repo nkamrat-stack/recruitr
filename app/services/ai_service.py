@@ -40,6 +40,124 @@ def get_openai_client(timeout: float = 30.0) -> Optional[OpenAI]:
         return None
 
 
+def generate_embedding(text: str) -> List[float]:
+    """
+    Generates an embedding vector for the given text using OpenAI's text-embedding-3-small model.
+    
+    Args:
+        text: Input text to generate embedding for (truncated to 8000 chars if longer)
+    
+    Returns:
+        List of floats representing the embedding vector (1536 dimensions for text-embedding-3-small)
+        Returns empty list if generation fails
+    """
+    client = get_openai_client()
+    if not client:
+        logger.error("Cannot generate embedding: OpenAI client not available")
+        return []
+    
+    # Truncate text to 8000 characters to stay within token limits
+    truncated_text = text[:8000] if len(text) > 8000 else text
+    
+    if not truncated_text.strip():
+        logger.warning("Empty text provided for embedding generation")
+        return []
+    
+    try:
+        response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=truncated_text
+        )
+        
+        embedding = response.data[0].embedding
+        logger.info(f"Successfully generated embedding (dimension: {len(embedding)})")
+        return embedding
+        
+    except Exception as e:
+        logger.error(f"Error generating embedding: {str(e)}")
+        return []
+
+
+def generate_profile_embedding(profile_data: Dict[str, Any]) -> List[float]:
+    """
+    Generates an embedding vector for a candidate profile by combining key profile fields.
+    
+    Args:
+        profile_data: Dictionary containing profile information with fields:
+            - technical_skills (str or None)
+            - strengths (str or None)
+            - personality_traits (str or None)
+            - culture_signals (str or None)
+    
+    Returns:
+        List of floats representing the profile embedding vector
+        Returns empty list if generation fails
+    """
+    # Combine relevant profile fields into one text
+    text_parts = []
+    
+    if profile_data.get("technical_skills"):
+        text_parts.append(f"Skills: {profile_data['technical_skills']}")
+    
+    if profile_data.get("strengths"):
+        text_parts.append(f"Strengths: {profile_data['strengths']}")
+    
+    if profile_data.get("personality_traits"):
+        text_parts.append(f"Personality: {profile_data['personality_traits']}")
+    
+    if profile_data.get("culture_signals"):
+        text_parts.append(f"Culture: {profile_data['culture_signals']}")
+    
+    if not text_parts:
+        logger.warning("No profile data available for embedding generation")
+        return []
+    
+    combined_text = " | ".join(text_parts)
+    logger.info(f"Generating profile embedding from {len(text_parts)} fields")
+    
+    return generate_embedding(combined_text)
+
+
+def generate_job_embedding(job_data: Dict[str, Any]) -> List[float]:
+    """
+    Generates an embedding vector for a job posting by combining key job fields.
+    
+    Args:
+        job_data: Dictionary containing job information with fields:
+            - title (str or None)
+            - description (str or None)
+            - required_skills (str or None)
+            - culture_requirements (str or None)
+    
+    Returns:
+        List of floats representing the job embedding vector
+        Returns empty list if generation fails
+    """
+    # Combine relevant job fields into one text
+    text_parts = []
+    
+    if job_data.get("title"):
+        text_parts.append(f"Title: {job_data['title']}")
+    
+    if job_data.get("description"):
+        text_parts.append(f"Description: {job_data['description']}")
+    
+    if job_data.get("required_skills"):
+        text_parts.append(f"Required Skills: {job_data['required_skills']}")
+    
+    if job_data.get("culture_requirements"):
+        text_parts.append(f"Culture: {job_data['culture_requirements']}")
+    
+    if not text_parts:
+        logger.warning("No job data available for embedding generation")
+        return []
+    
+    combined_text = " | ".join(text_parts)
+    logger.info(f"Generating job embedding from {len(text_parts)} fields")
+    
+    return generate_embedding(combined_text)
+
+
 def analyze_artifact(artifact_text: str, artifact_type: str) -> Dict[str, Any]:
     """
     Analyzes a single artifact (resume, email, video transcript, etc.) using GPT-4o-mini.
