@@ -3,5 +3,6 @@
   "/_app": "pages/_app.js",
   "/_document": "pages/_document.js",
   "/jobs": "pages/jobs.js",
-  "/jobs/[id]": "pages/jobs/[id].js"
+  "/jobs/[id]": "pages/jobs/[id].js",
+  "/candidates": "pages/candidates.js"
 }

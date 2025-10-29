@@ -1,0 +1,70 @@
+Redesign job creation with two clear paths and rich text editing:
+
+JOBS PAGE REDESIGN (pages/jobs/index.js):
+Replace "+ Create New Job" button with two prominent options:
+
+[📋 Import from LinkedIn]  [✨ Create with AI]
+
+Two separate modals/flows.
+
+FLOW 1: Import from LinkedIn (Keep existing, minor tweaks):
+- Modal with Job Title, Location, Description textarea, Screening Questions
+- "Import Job" button (saves immediately)
+- Redirects to job detail page
+
+FLOW 2: Create with AI (NEW):
+Modal with form fields:
+- Job Title (required)
+- Location (required)
+- Key Responsibilities (textarea with bullets, placeholder: "• Manage product roadmap\n• Lead engineering team")
+- Required Skills (comma-separated)
+- Nice-to-Have Skills (comma-separated)
+- Salary Range (min/max)
+- Hours/week
+- Additional Context (textarea, optional: "Our company culture, team size, growth stage, etc.")
+
+Button: "🤖 Generate Job Description with AI"
+
+When clicked:
+- Calls new endpoint: POST /jobs/generate-from-form
+- AI writes full LinkedIn-style job description using provided info
+- Shows preview of generated description
+- User can edit in-place with basic formatting
+- "Save Job" button
+
+BACKEND - NEW ENDPOINT (app/routers/jobs.py):
+POST /jobs/generate-from-form
+
+Takes form data, uses GPT-4o to generate full job description in LinkedIn format:
+- Writes Position Overview
+- Expands responsibilities into detailed sections
+- Writes About the Role, Requirements, etc.
+- Formats professionally like LinkedIn posts
+- Returns formatted HTML
+
+EDIT MODE REDESIGN (pages/jobs/[id].js):
+When user clicks "Edit" button:
+
+Instead of opening form with basic fields, open rich text editor modal:
+
+1. Show current display_description in editable format
+2. Basic formatting toolbar:
+   - Bold, Italic buttons
+   - Heading dropdown (H2, H3, Paragraph)
+   - Bullet list, Numbered list buttons
+   - Undo, Redo
+3. Use a simple rich text library like:
+   - react-quill (lightweight WYSIWYG)
+   - OR draft.js
+   - OR just contentEditable div with basic toolbar
+4. "Save Changes" updates display_description
+5. "Cancel" closes without saving
+
+EXPORT FEATURE:
+On job detail page, "📋 Copy for LinkedIn" button:
+- Converts HTML to clean formatted text
+- Copies to clipboard
+- Works from anywhere (detail page, after editing)
+
+Make the two creation paths visually distinct and equally prominent on Jobs page.
+The editing experience should feel like editing a Google Doc, not a form.

@@ -18,14 +18,24 @@ Do not make changes to the file `Y`.
 #### Technical Implementations
 **Backend (FastAPI)**
 - **Database**: SQLite, managed with SQLAlchemy ORM.
-  - **Schema**: `candidates`, `candidate_artifacts`, `candidate_profiles`, `jobs`, `matches`, `feedback`, `company_profile`.
+  - **Schema**: `candidates`, `candidate_artifacts`, `candidate_profiles`, `jobs`, `matches`, `applications`, `feedback`, `company_profile`.
+  - **Applications Table**: Many-to-many relationship tracking between candidates and jobs:
+    - Fields: id, candidate_id, job_id, applied_at, application_status (applied/reviewing/interviewing/rejected/hired), notes
+    - Unique constraint on (candidate_id, job_id) prevents duplicate applications
+    - Enables application tracking separate from AI matching
   - **Jobs Table**: Includes dual-format LinkedIn storage:
     - `linkedin_original_text` - Raw pasted LinkedIn job text
     - `display_description` - HTML-formatted description preserving original LinkedIn structure
     - `description` - AI-generated summary for quick reference
 - **API Endpoints**:
-  - **Candidates**: CRUD operations, artifact management, AI profile generation and retrieval.
-  - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools, candidate matching, multi-level evaluation pipelines, LinkedIn import with screening questions.
+  - **Candidates**: CRUD operations, artifact management, AI profile generation and retrieval, job application management.
+    - `POST /candidates/{candidate_id}/apply/{job_id}`: Apply candidate to job (prevents duplicates)
+    - `GET /candidates/{candidate_id}/applications`: Get all jobs candidate applied to (uses JOIN to avoid N+1 queries)
+    - `DELETE /applications/{application_id}`: Remove application
+    - `PUT /applications/{application_id}/status`: Update application status (applied/reviewing/interviewing/rejected/hired)
+  - **Jobs**: CRUD operations, listing jobs with match counts, AI-powered job creation tools, candidate matching, multi-level evaluation pipelines, LinkedIn import with screening questions, applicant tracking.
+    - `GET /jobs/{job_id}/applicant-count`: Get count of applicants for a job
+    - `GET /jobs/{job_id}/applicants`: Get all candidates who applied to this job (uses JOIN to avoid N+1 queries)
     - `POST /jobs/parse-linkedin`: Parse complete LinkedIn job posts using simple text-to-HTML conversion + AI extraction.
       - **Display HTML (NO AI)**: Simple regex-based text-to-HTML conversion preserving EVERY word (zero summarization possible)
         - Detects bullets (•, -, *), headers (ALL CAPS or ending with :), paragraphs
@@ -66,6 +76,9 @@ Do not make changes to the file `Y`.
 - **Pages**:
   - **Home (`/`)**: Entry point.
   - **Candidates List (`/candidates`)**: Displays all candidates with AI status, scores, and bulk actions.
+    - **Applied Jobs Column**: Shows clickable job badges for each application with hover tooltips showing application date
+    - Displays "Not applied" for candidates without applications
+    - Job badges are clickable and navigate to job detail pages
   - **Candidate Detail (`/candidates/[id]`)**: Comprehensive view with materials management, compliance checklist, and AI analysis.
   - **Jobs List (`/jobs`)**: Manages job postings with AI-powered creation tools.
     - **Improved Navigation**: Each job card displays 3 buttons:
@@ -83,6 +96,7 @@ Do not make changes to the file `Y`.
         * Real-time slider updates with visual feedback
     - **Screening Questions Tab**: Lists all screening questions with required/preferred badges
     - Professional design with job header (title, location, salary, hours, status badges)
+    - **Applicant Tracking**: Shows applicant count badge (📥 X Applicants) in header
     - Actions: "View Candidate Matches" and "Edit Job" buttons
     - **Import from LinkedIn**: Advanced AI-powered LinkedIn job parser with dual-format extraction:
       - Paste complete LinkedIn job posts (including job description, must-have qualifications, preferred qualifications)
